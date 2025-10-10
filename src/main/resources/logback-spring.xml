@@ -30,6 +30,7 @@
 <!--    </logger>-->
 
     <logger name = "com.gravifox.tvb.Application" level="INFO"/>
+    <logger name = "com.gravifox.tvb.domain.analysis" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="ASPECT_LOGGING"/>

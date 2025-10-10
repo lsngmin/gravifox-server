@@ -3,6 +3,7 @@ package com.gravifox.tvb.domain.member.service.oauth2;
 import com.gravifox.tvb.domain.member.dto.login.LoginRequest;
 import com.gravifox.tvb.domain.member.domain.user.User;
 import com.gravifox.tvb.domain.member.repository.SocialLoginRepository;
+import com.gravifox.tvb.domain.member.repository.UserRepository;
 import com.gravifox.tvb.security.jwt.util.JWTUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,8 +25,13 @@ import java.util.Optional;
 public class OAuth2UserSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final JWTUtil jwtUtil;
     private final SocialLoginRepository socialLoginRepository;
+    private final UserRepository userRepository;
 
     @Value("${front.redirect.url}") private String url;
+    @Value("${app.cookie.secure:true}") private boolean cookieSecure;
+    @Value("${app.cookie.same-site:None}") private String cookieSameSite;
+    @Value("${app.cookie.max-age-days:7}") private int cookieMaxAgeDays;
+    @Value("${app.cookie.domain:}") private String cookieDomain;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
@@ -40,22 +46,38 @@ public class OAuth2UserSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         if (user.isPresent()) {
             log.info("User found. userId={}, socialEmail={}", user.get().getUserId(), socialId);
 
-            String refreshToken = jwtUtil.createToken(
-                    LoginRequest.builder()
-                            .user(user.get())
-                            .build().getDataMap(),
-                    600);
+            // JWT 클레임의 userId는 소셜 이메일로 저장하여 프론트에 이메일이 노출되도록 함
+            java.util.Map<String, String> claims = java.util.Map.of(
+                    "userId", socialId,
+                    "userNo", String.valueOf(user.get().getUserNo())
+            );
+            String refreshToken = jwtUtil.createToken(claims, 7 * 24 * 60);
             Cookie cookie = new Cookie("refreshToken", refreshToken);
             cookie.setHttpOnly(true);
-            cookie.setSecure(true);//TODO: 현재는 https 통신을 지원하지 않아 비활성화 했지만 추후 https 통신 연결시 true 바꾸어야 한다.
+            cookie.setSecure(cookieSecure);// 환경에 따라 보안 플래그 분기
             cookie.setPath("/");
-            cookie.setMaxAge(7 * 24 * 60 * 60);
-            cookie.setAttribute("SameSite", "None");
+            cookie.setMaxAge(cookieMaxAgeDays * 24 * 60 * 60);
+            cookie.setAttribute("SameSite", cookieSameSite);
+            if (cookieDomain != null && !cookieDomain.isBlank()) {
+                cookie.setDomain(cookieDomain);
+            }
             response.addCookie(cookie);
             log.info("Refresh token set in cookie for userId={}", user.get().getUserId());
 
+            // 로그인 성공(소셜) 시 게스트 쿠키 제거
+            Cookie guestCookie = new Cookie("guest", null);
+            guestCookie.setHttpOnly(false);
+            guestCookie.setSecure(cookieSecure);
+            guestCookie.setPath("/");
+            guestCookie.setMaxAge(0);
+            guestCookie.setAttribute("SameSite", cookieSameSite);
+            if (cookieDomain != null && !cookieDomain.isBlank()) {
+                guestCookie.setDomain(cookieDomain);
+            }
+            response.addCookie(guestCookie);
+
         } else {
-            System.out.println("NOOOOOOO");
+            log.warn("OAuth2 login succeeded but user not found for email={}", socialId);
         }
         log.info("url received: {}", url);
         response.sendRedirect(url);

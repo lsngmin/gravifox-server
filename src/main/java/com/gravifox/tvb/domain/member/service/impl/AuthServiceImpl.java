@@ -3,8 +3,10 @@ package com.gravifox.tvb.domain.member.service.impl;
 import com.gravifox.tvb.annotation.LogContext;
 import com.gravifox.tvb.domain.member.dto.login.LoginRequest;
 import com.gravifox.tvb.domain.member.domain.user.User;
+import com.gravifox.tvb.domain.member.domain.user.LoginType;
 import com.gravifox.tvb.domain.member.exception.InvalidAuthorizationHeaderException;
 import com.gravifox.tvb.domain.member.exception.InvalidCredentialsException;
+import com.gravifox.tvb.domain.member.exception.EmailNotVerifiedException;
 import com.gravifox.tvb.domain.member.repository.UserRepository;
 import com.gravifox.tvb.domain.member.repository.PasswordRepository;
 import com.gravifox.tvb.domain.member.service.AuthService;
@@ -26,6 +28,20 @@ public class AuthServiceImpl implements AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final PasswordRepository passwordRepository;
 
+    // Token TTLs (minutes)
+    private static final int ACCESS_TOKEN_TTL_MIN = 15;           // 15 minutes
+    private static final int REFRESH_TOKEN_TTL_MIN = 7 * 24 * 60; // 7 days
+
+    // Cookie options via properties (with safe defaults)
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.same-site:None}")
+    private String cookieSameSite;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.max-age-days:7}")
+    private int cookieMaxAgeDays;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.domain:}")
+    private String cookieDomain;
+
     @Override @LogContext(action = "UserAuthentication", detail = "UserId")
     public Map<String, String> makeTokenAndLogin(LoginRequest loginRequest) {
         String userId = loginRequest.getUser().getUserId();
@@ -38,10 +54,15 @@ public class AuthServiceImpl implements AuthService {
         if (password.isPresent() &&
                 passwordEncoder.matches(
                         loginRequest.getPassword().getPassword(), password.get())) {
+            // 이메일 로그인인 경우, 이메일 인증 여부 확인(미인증이면 차단)
+            if (user.get().getLoginType() == LoginType.EMAIL &&
+                    !Boolean.TRUE.equals(user.get().getEmailVerified())) {
+                throw new EmailNotVerifiedException(userId);
+            }
             loginRequest.changeUser(user.get());
             Map<String, String> dataMap = loginRequest.getDataMap();
-            String accessToken = jwtUtil.createToken(dataMap, 1);
-            String refreshToken = jwtUtil.createToken(dataMap, 9999999);
+            String accessToken = jwtUtil.createToken(dataMap, ACCESS_TOKEN_TTL_MIN);
+            String refreshToken = jwtUtil.createToken(dataMap, REFRESH_TOKEN_TTL_MIN);
             return Map.of("accessToken", accessToken, "refreshToken",refreshToken, "userId", userId);
         }
         throw new InvalidCredentialsException(userId);
@@ -81,10 +102,13 @@ public class AuthServiceImpl implements AuthService {
     public Cookie storeRefreshTokenInCookie(String refreshToken) {
         Cookie cookie = new Cookie("refreshToken", refreshToken);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60);
-        cookie.setAttribute("SameSite", "None");
+        cookie.setMaxAge(cookieMaxAgeDays * 24 * 60 * 60);
+        cookie.setAttribute("SameSite", cookieSameSite);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         return cookie;
     }
 
@@ -96,9 +120,30 @@ public class AuthServiceImpl implements AuthService {
             Map<String, Object> claims = jwtUtil.validateToken(refreshToken);
             Map<String, String> dataMap = Map.of("userId", String.valueOf(claims.get("userId")), "userNo", String.valueOf(claims.get("userNo")));
 
-            String newAccessToken = jwtUtil.createToken(dataMap, 999);
-            String newRefreshToken = jwtUtil.createToken(dataMap, 999);
+            String newAccessToken = jwtUtil.createToken(dataMap, ACCESS_TOKEN_TTL_MIN);
+            String newRefreshToken = jwtUtil.createToken(dataMap, REFRESH_TOKEN_TTL_MIN);
 
             return Map.of("accessToken", newAccessToken, "refreshToken", newRefreshToken);
+    }
+
+    @Override
+    @LogContext(action = "UserAuthentication", detail = "UserId")
+    public Map<String, String> issueTokensForUserId(String userId) {
+        Optional<User> userOpt = userRepository.findByUserId(userId);
+        User user = userOpt.orElseThrow(() -> new InvalidCredentialsException(userId));
+
+        // 이메일 로그인 타입의 경우 이메일 인증 완료여부 확인
+        if (user.getLoginType() == LoginType.EMAIL && !Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new EmailNotVerifiedException(userId);
+        }
+
+        Map<String, String> dataMap = LoginRequest.builder()
+                .user(user)
+                .build()
+                .getDataMap();
+
+        String accessToken = jwtUtil.createToken(dataMap, ACCESS_TOKEN_TTL_MIN);
+        String refreshToken = jwtUtil.createToken(dataMap, REFRESH_TOKEN_TTL_MIN);
+        return Map.of("accessToken", accessToken, "refreshToken", refreshToken, "userId", userId);
     }
 }
