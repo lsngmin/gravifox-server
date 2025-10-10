@@ -3,6 +3,7 @@ package com.gravifox.tvb.domain.member.controller;
 import com.gravifox.tvb.domain.member.domain.user.User;
 import com.gravifox.tvb.domain.member.dto.mypage.MyInfoResponse;
 import com.gravifox.tvb.domain.member.dto.mypage.PasswordChangeRequest;
+import com.gravifox.tvb.domain.member.dto.mypage.ProfileUpdateRequest;
 import com.gravifox.tvb.domain.member.exception.user.UserNotFoundException;
 import com.gravifox.tvb.domain.member.repository.UserRepository;
 import com.gravifox.tvb.domain.member.service.MemberService;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import java.time.ZoneOffset;
 
 //
 @Tag(
@@ -52,12 +54,29 @@ public class MemberController {
     )
 
     @GetMapping("/")
-    public ResponseEntity<MyInfoResponse> getMyInfo(Authentication authentication) {
+    public ResponseEntity<MyInfoResponse> getMyInfo(
+            Authentication authentication,
+            @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch
+    ) {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         Long userNo = Long.parseLong(userPrincipal.getName());
 
+        // Build weak ETag based on userNo and profile.updatedAt
+        var userOpt = userRepository.findById(userNo);
+        if (userOpt.isEmpty()) {
+            throw new UserNotFoundException(userNo);
+        }
+        var user = userOpt.get();
+        var updatedAt = user.getProfile() != null ? user.getProfile().getUpdatedAt() : null;
+        long ver = updatedAt != null ? updatedAt.toEpochSecond(ZoneOffset.UTC) : 0L;
+        String etag = "W/\"" + userNo + ":" + ver + "\"";
+
+        if (ifNoneMatch != null && ifNoneMatch.equals(etag)) {
+            return ResponseEntity.status(304).eTag(etag).build();
+        }
+
         MyInfoResponse response = memberService.getMyInfo(userNo);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok().eTag(etag).body(response);
     }
 
     @DeleteMapping("/")
@@ -73,5 +92,21 @@ public class MemberController {
         Long userNo = Long.parseLong(principal.getName()); // getName() = userNo (String)
         memberService.changePassword(userNo, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/")
+    public ResponseEntity<MyInfoResponse> updateProfile(Authentication authentication,
+                                                        @RequestBody ProfileUpdateRequest request) {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        Long userNo = Long.parseLong(userPrincipal.getName());
+
+        MyInfoResponse updated = memberService.updateProfile(userNo, request);
+
+        var userOpt = userRepository.findById(userNo);
+        var updatedAt = userOpt.map(u -> u.getProfile() != null ? u.getProfile().getUpdatedAt() : null).orElse(null);
+        long ver = updatedAt != null ? updatedAt.toEpochSecond(ZoneOffset.UTC) : 0L;
+        String etag = "W/\"" + userNo + ":" + ver + "\"";
+
+        return ResponseEntity.ok().eTag(etag).body(updated);
     }
 }

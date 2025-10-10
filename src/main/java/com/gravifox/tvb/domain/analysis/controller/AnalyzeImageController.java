@@ -11,13 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/images")
 @Tag(name = "이미지 분석", description = "딥러닝 서버와 연동하여 이미지 분석 결과를 반환하는 API입니다.")
 public class AnalyzeImageController {
-    private final String fastApiUrl = "http://localhost:58651";
 
     @Autowired
     private WebClientService webClientService;
@@ -57,9 +57,13 @@ public class AnalyzeImageController {
                     @ApiResponse(responseCode = "500", description = "서버 오류")
             }
     )
-
     @PostMapping("/send_data")
-    public String sendDataToFastAPI() throws IOException {
-       return null;
+    public ResponseEntity<?> sendDataToFastAPI() throws IOException {
+        String uuid = UUID.randomUUID().toString();
+        log.info("AnalyzeImageController: analyzeImage: {}", uuid);
+
+        String analyzeResult = webClientService.sendVideoToAIServer("sample");
+        log.info("{}", analyzeResult);
+        return ResponseEntity.ok().body(analyzeResult);
     }
 }

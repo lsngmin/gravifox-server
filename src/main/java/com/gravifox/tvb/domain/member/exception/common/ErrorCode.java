@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Oops! Something doesn’t match."),
+    EMAIL_NOT_VERIFIED(HttpStatus.UNAUTHORIZED, "EMAIL_NOT_VERIFIED", "Oops! Something doesn’t match."),
+    TOKEN_INVALID(HttpStatus.BAD_REQUEST, "TOKEN_INVALID", "Invalid or expired link."),
+    TOKEN_EXPIRED(HttpStatus.GONE, "TOKEN_EXPIRED", "Verification link has expired."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다."),
 
     INVALID_AUTHORIZATION_HEADER(HttpStatus.UNAUTHORIZED, "INVALID_AUTHORIZATION_HEADER", "Authorization header must start with 'Bearer'."),

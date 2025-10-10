@@ -36,4 +36,16 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private SocialLogin socialLogin;
+
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private Boolean emailVerified = false;
+
+    public void verifyEmail() {
+        this.emailVerified = true;
+    }
+
+    public void setProfile(Profile profile) {
+        this.profile = profile;
+    }
 }

@@ -19,6 +19,8 @@ import com.gravifox.tvb.domain.member.repository.PasswordRepository;
 import com.gravifox.tvb.domain.member.repository.UserTermRepository;
 import com.gravifox.tvb.domain.member.service.RegisterService;
 import com.gravifox.tvb.domain.member.service.UserTermService;
+import com.gravifox.tvb.domain.member.service.EmailVerificationService;
+import com.gravifox.tvb.domain.member.domain.verification.VerificationPurpose;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,9 @@ public class RegisterServiceImpl implements RegisterService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private DashboardRepository dashboardRepository;
+
+    @Autowired
+    private EmailVerificationService emailVerificationService;
 
     @Override
     @Transactional
@@ -74,6 +79,8 @@ public class RegisterServiceImpl implements RegisterService {
                 .user(user)
                 .build();
        profileRepository.save(profile);
+       // 양방향 관계 동기화로 조회 시 user.getProfile() null 문제 방지
+       user.setProfile(profile);
 
         Password password = Password.builder()
                 .password(passwordEncoder.encode(passwordD_.getPassword()))
@@ -97,6 +104,13 @@ public class RegisterServiceImpl implements RegisterService {
                 .toList();
 
         userTermRepository.saveAll(userTerms);
+
+        // 이메일 인증 요청 자동 발송 (회원가입 완료 직후)
+        try {
+            emailVerificationService.requestVerification(user.getUserId(), VerificationPurpose.SIGNUP);
+        } catch (Exception e) {
+            // 발송 실패가 회원가입 트랜잭션을 막지 않도록 예외는 삼킵니다. (로그는 AOP/전역 로거에서 처리)
+        }
 
         return toRegisterResponse(user);
     }

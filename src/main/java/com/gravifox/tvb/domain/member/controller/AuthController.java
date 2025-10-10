@@ -41,6 +41,14 @@ import java.util.Map;
 )
 public class AuthController {
     private final AuthService authService;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.same-site:None}")
+    private String cookieSameSite;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.max-age-days:7}")
+    private int cookieMaxAgeDays;
+    @org.springframework.beans.factory.annotation.Value("${app.cookie.domain:}")
+    private String cookieDomain;
 
     @Operation(
             summary = "사용자 로그인",
@@ -79,6 +87,17 @@ public class AuthController {
 
         Map<String, String> token = authService.makeTokenAndLogin(loginRequest);
         response.addCookie(authService.storeRefreshTokenInCookie(token.get("refreshToken")));
+        // 로그인 성공 시 게스트 쿠키 제거
+        Cookie guestCookie = new Cookie("guest", null);
+        guestCookie.setHttpOnly(false);
+        guestCookie.setSecure(cookieSecure);
+        guestCookie.setPath("/");
+        guestCookie.setMaxAge(0);
+        guestCookie.setAttribute("SameSite", cookieSameSite);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            guestCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(guestCookie);
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setAccessToken(token.get("accessToken"));
         loginResponse.setUserId(token.get("userId"));
@@ -130,10 +149,32 @@ public class AuthController {
                                      @CookieValue(name = "refreshToken", required = false) String refreshToken,
                                      HttpServletResponse response) {
         if(refreshToken == null) {
-            return ResponseEntity.ok().build();
+            // 리프레시 토큰이 없으면 게스트 상태로 간주 -> 게스트 쿠키 1
+            Cookie guestCookie = new Cookie("guest", "1");
+            guestCookie.setHttpOnly(false);
+            guestCookie.setSecure(cookieSecure);
+            guestCookie.setPath("/");
+            guestCookie.setMaxAge(cookieMaxAgeDays * 24 * 60 * 60);
+            guestCookie.setAttribute("SameSite", cookieSameSite);
+            if (cookieDomain != null && !cookieDomain.isBlank()) {
+                guestCookie.setDomain(cookieDomain);
+            }
+            response.addCookie(guestCookie);
+            return ResponseEntity.noContent().build();
         }
         Map<String, String> map = authService.RefreshToken(accessToken, refreshToken);
         response.addCookie(authService.storeRefreshTokenInCookie(map.get("refreshToken")));
+        // 리프레시 성공 시 게스트 쿠키 제거
+        Cookie guestCookie = new Cookie("guest", null);
+        guestCookie.setHttpOnly(false);
+        guestCookie.setSecure(cookieSecure);
+        guestCookie.setPath("/");
+        guestCookie.setMaxAge(0);
+        guestCookie.setAttribute("SameSite", cookieSameSite);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            guestCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(guestCookie);
         return ResponseEntity.ok(Map.of("accessToken", map.get("accessToken")));
     }
 
@@ -176,10 +217,25 @@ public class AuthController {
         log.info("Logout Request: {}", response.getStatus());
         Cookie cookie = new Cookie("refreshToken", null);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/");
         cookie.setMaxAge(0);
+        cookie.setAttribute("SameSite", cookieSameSite);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         response.addCookie(cookie);
+        // 로그아웃 시 게스트 쿠키 1로 설정
+        Cookie guestCookie = new Cookie("guest", "1");
+        guestCookie.setHttpOnly(false);
+        guestCookie.setSecure(cookieSecure);
+        guestCookie.setPath("/");
+        guestCookie.setMaxAge(cookieMaxAgeDays * 24 * 60 * 60);
+        guestCookie.setAttribute("SameSite", cookieSameSite);
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            guestCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(guestCookie);
         return ResponseEntity.ok().build();
     }
 }

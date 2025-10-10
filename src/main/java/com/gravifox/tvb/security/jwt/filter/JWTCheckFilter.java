@@ -33,7 +33,9 @@ public class JWTCheckFilter extends OncePerRequestFilter {
                 path.startsWith("/api/v1/auth/refresh") || path.startsWith("/health") ||
                 path.startsWith("/api/v1/auth/**") || path.startsWith("/api/v1/images/send_data") ||
                 path.startsWith("/api/v1/issue/") || path.startsWith("/docs") || path.startsWith("/v3/api-docs") ||
-                path.startsWith("/docs/") || path.startsWith("/swagger-resources/**") || path.startsWith("/api/upload-swagger");
+                path.startsWith("/docs/") || path.startsWith("/swagger-resources/**") || path.startsWith("/api/upload-swagger") ||
+                path.startsWith("/api/v1/auth/email/**") || path.startsWith("/api/analyze") || path.startsWith("/api/analyze/**") ||
+                path.equals("/upload") || path.startsWith("/upload/") || path.startsWith("/api/v1/files/upload");
 
     }
 
@@ -47,8 +49,7 @@ public class JWTCheckFilter extends OncePerRequestFilter {
         String accessToken = headerStr.substring(7);
         try {
             java.util.Map<String, Object> tokenMap = jwtUtil.validateToken(accessToken);
-            java.util.Map<String, Object> rTokenMap = jwtUtil.validateToken(accessToken);
-            String userNo = rTokenMap.get("userNo").toString();
+            String userNo = tokenMap.get("userNo").toString();
 
             //TODO : roles라는 역할이 추가될 때 마찬가지로 roles를 받아오는 코드 추가 필요
             //TODO : 지금의 역할은 User 외 존재 X. 따라서 User로 역할을 고정한다.
@@ -70,7 +71,8 @@ public class JWTCheckFilter extends OncePerRequestFilter {
 
     }
     private void handleException(HttpServletResponse response, Exception e) throws IOException {
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setHeader("WWW-Authenticate", "Bearer error=\"invalid_token\", error_description=\"" + e.getMessage() + "\"");
         response.setContentType("application/json");
         response.getWriter().println("{\"error\":\"" + e.getMessage() + "\"}");
     }

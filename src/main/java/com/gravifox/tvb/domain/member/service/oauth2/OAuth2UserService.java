@@ -47,7 +47,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
 
     private SocialLogin registerSocial(String providerId, String email, String name) {
         User user = User.builder()
-                .userId(java.util.UUID.randomUUID().toString())
+                .userId(email)
                 .loginType(LoginType.GOOGLE)
                 .build();
         userRepository.save(user);
@@ -61,6 +61,8 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 .user(user)
                 .build();
         profileRepository.save(profile);
+        // 양방향 관계 동기화
+        user.setProfile(profile);
         log.info("Profile created for social login: nickname={}", name);
 
         Password password = Password.builder()

@@ -22,6 +22,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 
 import java.util.List;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableMethodSecurity
@@ -33,6 +35,7 @@ public class SecurityConfig {
     private final OAuth2UserSuccessHandler oAuth2UserSuccessHandler;
 
     @Value("${front.redirect.login-url}") private String loginUrl;
+    @Value("${cors.allowed-origins:*}") private String allowedOrigins;
 
     @Autowired
     private void setJwtCheckFilter(JWTCheckFilter jwtCheckFilter) {this.jwtCheckFilter = jwtCheckFilter;}
@@ -43,15 +46,19 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.NEVER))
-
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 //                .authorizeHttpRequests(auth -> auth
 //                        .requestMatchers(
 //                                "/v3/api-docs/**",
 //                                "/swagger-ui/**",
 //                                "/swagger-ui.html",
 //                                "/docs/**",
-//                                "/api/upload-swagger"
+//                                "/api/upload-swagger",
+//                                "/health/**",
+//                                "/api/v1/register/**",
+//                                "/api/v1/auth/login",
+//                                "/api/v1/auth/refresh",
+//                                "/api/v1/auth/email/**"
 //                        ).permitAll()
 //                        .anyRequest().authenticated()
 //                )
@@ -76,10 +83,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-
-        corsConfiguration.setAllowedOriginPatterns(List.of("*"));
+        // Configure allowed origins from property. If "*", use patterns; otherwise explicit origins.
+        if (allowedOrigins != null && (allowedOrigins.equals("*") || allowedOrigins.contains("*"))) {
+            corsConfiguration.setAllowedOriginPatterns(List.of("*"));
+        } else if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+            corsConfiguration.setAllowedOrigins(origins);
+        } else {
+            corsConfiguration.setAllowedOriginPatterns(List.of("*"));
+        }
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "HEAD", "OPTIONS"));
-        corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type","X-Request-ID"));
+        corsConfiguration.setAllowedHeaders(List.of(
+                "Authorization", "Cache-Control", "Content-Type", "X-Request-ID",
+                "If-None-Match", "If-Match"
+        ));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setMaxAge(3600L);
 
