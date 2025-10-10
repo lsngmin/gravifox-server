@@ -42,26 +42,7 @@ public class GlobalMemberExceptionHandler {
                 )
         );
     }
-    //아래부터 회원가입 예외처리 핸들러 입니다.
-    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
-    public ResponseEntity<ErrorMessageMap> handleMethodArgumentNotValidException(Exception ex) {
-        HttpServletRequest request = ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
-        log.warn(logUtil.formatMessage(
-                "UserRegistration",
-                ex.getClass().getSimpleName(),
-                ErrorCode.REQUEST_VALIDATION_ERROR.getMessage(),
-                request.getMethod(),
-                request.getRequestURI(),
-                ErrorCode.REQUEST_VALIDATION_ERROR.getHttpStatus().value(),
-               ""
-        ));
-        return ResponseEntity.status(ErrorCode.REQUEST_VALIDATION_ERROR.getHttpStatus()).body(
-                new ErrorMessageMap(
-                        ErrorCode.REQUEST_VALIDATION_ERROR.getCode(),
-                        ErrorCode.REQUEST_VALIDATION_ERROR.getMessage()
-                )
-        );
-    }
+    // 회원가입 유효성 검증 예외는 전역 핸들러에서 일괄 처리합니다.
 //    @ExceptionHandler(Exception.class)
 //    public ResponseEntity<Map<String, String>> handleException(Exception e) {
 //        Map<String, String> error = new HashMap<>();

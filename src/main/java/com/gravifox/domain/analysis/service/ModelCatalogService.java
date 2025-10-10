@@ -27,7 +27,7 @@ public class ModelCatalogService {
     private final ObjectMapper objectMapper;
     private final AtomicReference<Cache> cache = new AtomicReference<>();
 
-    public ModelCatalogService(@Value("${analyze.models.catalog-path}") String catalogPath,
+    public ModelCatalogService(@Value("${analyze.models.catalog-path:tvb-ai/tvb-server/models/catalog.json}") String catalogPath,
                                ObjectMapper objectMapper) {
         this.catalogPath = Path.of(catalogPath).toAbsolutePath().normalize();
         this.objectMapper = objectMapper;

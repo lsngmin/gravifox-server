@@ -18,7 +18,7 @@ import com.slack.api.model.Attachment;
 @Slf4j
 @Service
 public class SLog {
-    @Value("${logging.slack.webhook-uri}")
+    @Value("${logging.slack.webhook-uri:}")
     private String u;
     private final Slack slack = Slack.getInstance();
 

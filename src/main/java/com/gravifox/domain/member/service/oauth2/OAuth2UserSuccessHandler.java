@@ -26,7 +26,7 @@ public class OAuth2UserSuccessHandler extends SimpleUrlAuthenticationSuccessHand
     private final SocialLoginRepository socialLoginRepository;
     private final UserRepository userRepository;
 
-    @Value("${front.redirect.url}") private String url;
+    @Value("${front.redirect.url:/}") private String url;
     @Value("${app.cookie.secure:true}") private boolean cookieSecure;
     @Value("${app.cookie.same-site:None}") private String cookieSameSite;
     @Value("${app.cookie.max-age-days:7}") private int cookieMaxAgeDays;

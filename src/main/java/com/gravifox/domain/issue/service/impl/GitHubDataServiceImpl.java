@@ -15,10 +15,10 @@ import java.util.stream.Stream;
 @Service
 public class GitHubDataServiceImpl implements GitHubDataService {
 
-    @Value("${git-hub.repo.tvb}") private String tvbBaseUrl;
-    @Value("${git-hub.repo.tvb-ai}") private String tvbAiBaseUrl;
-    @Value("${git-hub.repo.tvb-front}") private String tvbFrontBaseUrl;
-    @Value("${git-hub.repo.token}") private String token;
+    @Value("${git-hub.repo.tvb:}") private String tvbBaseUrl;
+    @Value("${git-hub.repo.tvb-ai:}") private String tvbAiBaseUrl;
+    @Value("${git-hub.repo.tvb-front:}") private String tvbFrontBaseUrl;
+    @Value("${git-hub.repo.token:}") private String token;
 
 
     @Override

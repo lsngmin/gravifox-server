@@ -39,7 +39,7 @@ public class AnalyzeJobController {
     public AnalyzeJobController(RabbitTemplate rabbitTemplate,
                                 TokenStore tokenStore,
                                 SseHub sseHub,
-                                @Value("${analyze.exchange}") String analyzeExchange,
+                                @Value("${analyze.exchange:analyze.exchange}") String analyzeExchange,
                                 ModelCatalogService modelCatalogService) {
         this.rabbitTemplate = rabbitTemplate;
         this.tokenStore = tokenStore;

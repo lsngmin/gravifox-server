@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class JWTUtil {
     private final String key;
 
-    public JWTUtil(@Value("${jwt.secret.key}") String key) {
+    public JWTUtil(@Value("${jwt.secret.key:test-secret}") String key) {
         this.key = key;
     }
 

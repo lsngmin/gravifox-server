@@ -20,12 +20,20 @@ public class InMemoryTokenStore implements TokenStore {
     private final Duration ttl;
     private final long graceSec;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public InMemoryTokenStore(
             @Value("${analyze.token-ttl-hours:24}") long tokenTtlHours,
             @Value("${analyze.token-grace-sec:0}") long tokenGraceSec
     ) {
         this.ttl = Duration.ofHours(tokenTtlHours);
         this.graceSec = Math.max(0, tokenGraceSec);
+    }
+
+    /**
+     * 테스트 및 수동 생성용 간편 생성자. 유예(grace) 초는 0으로 설정됩니다.
+     */
+    public InMemoryTokenStore(long tokenTtlHours) {
+        this(tokenTtlHours, 0L);
     }
 
     @Override

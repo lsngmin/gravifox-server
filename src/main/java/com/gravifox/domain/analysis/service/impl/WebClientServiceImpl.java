@@ -21,8 +21,8 @@ import java.util.stream.Stream;
 @Slf4j
 @Service
 public class WebClientServiceImpl implements WebClientService {
-    @Value("${backend.upload.path}") private String uploadPath;
-    @Value("${ai.base.url}") private String fastApiUrl;
+    @Value("${backend.upload.path:tvb/upload}") private String uploadPath;
+    @Value("${ai.base.url:http://localhost:8000}") private String fastApiUrl;
 
     private final WebClient webClient = WebClient.builder()
             .baseUrl(fastApiUrl)

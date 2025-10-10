@@ -3,6 +3,7 @@ package com.gravifox.security.config;
 import com.gravifox.security.jwt.filter.JWTCheckFilter;
 import com.gravifox.security.handler.RestAccessDeniedHandler;
 import com.gravifox.security.handler.RestAuthenticationEntryPoint;
+import com.gravifox.security.path.RequestPathMatcher;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserService;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserSuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint = new RestAuthenticationEntryPoint();
     private final RestAccessDeniedHandler accessDeniedHandler = new RestAccessDeniedHandler();
 
-    @Value("${front.redirect.login-url}") private String loginUrl;
+    @Value("${front.redirect.login-url:/login}") private String loginUrl;
     @Value("${cors.allowed-origins:*}") private String allowedOrigins;
 
     @Autowired
@@ -54,6 +55,10 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(RequestPathMatcher.PUBLIC_PATTERNS.toArray(new String[0])).permitAll()
+                        .anyRequest().authenticated()
                 )
 //                .authorizeHttpRequests(auth -> auth
 //                        .requestMatchers(

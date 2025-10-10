@@ -5,6 +5,7 @@ import com.gravifox.domain.member.domain.Password;
 import com.gravifox.domain.member.domain.user.User;
 import com.gravifox.domain.member.dto.AuthDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.HashMap;
@@ -39,6 +40,7 @@ public class LoginRequest implements AuthDTO {
         }
         """
     )
+    @NotNull(message = "user must not be null")
     private User user;
 
     @Schema(
@@ -50,6 +52,7 @@ public class LoginRequest implements AuthDTO {
         }
         """
     )
+    @NotNull(message = "password must not be null")
     private Password password;
 
     public Map<String, String> getDataMap() {

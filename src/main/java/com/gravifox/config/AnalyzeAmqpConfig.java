@@ -10,10 +10,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AnalyzeAmqpConfig {
 
-    @Value("${analyze.exchange}")
+    @Value("${analyze.exchange:analyze.exchange}")
     private String analyzeExchangeName;
 
-    @Value("${analyze.instance-id}")
+    @Value("${analyze.instance-id:local}")
     private String instanceId;
 
     private String sanitize(String s) {
@@ -66,4 +66,3 @@ public class AnalyzeAmqpConfig {
         return template;
     }
 }
-

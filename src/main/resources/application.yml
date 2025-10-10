@@ -21,6 +21,23 @@ spring:
             scope:
               - email
               - profile
+  mail:
+    host: email-smtp.us-east-2.amazonaws.com
+    port: 587
+    username:
+    password:
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: ${SPRING_RABBITMQ_VIRTUAL_HOST:/}
+    listener:
+      simple:
+        prefetch: ${RABBIT_PREFETCH:50}
+    template:
+      mandatory: true
 
 jwt:
   secret:
@@ -58,3 +75,36 @@ springdoc:
     groups:
       enabled: false
 
+# ===== Email Verification / SES (template; fill values as needed) =====
+aws:
+  region: us-east-2
+  access-key: ${ACCESS_KEY_AWS}
+  secret-key: ${SECRET_KEY_AWS}
+
+ses:
+  from-email: no-reply@gravifox.com
+
+email:
+  verification:
+    ttl-seconds: 86400                 # 토큰 유효기간(초)
+    resend-cooldown-seconds: 60        # 재발송 쿨다운(초)
+    rate-limit-per-hour: 5             # 시간당 발송 한도(0=비활성)
+    verify-base-url: https://api.gravifox.com/api/v1/auth/email/verify  # 검증 링크 베이스 URL
+    service-name: GraviFox             # 메일에 노출될 서비스명
+
+# 메일 발송 구현 선택(log | ses). 기본값 log
+mail:
+  sender: ses
+
+# Analyze pipeline (SSE & MQ)
+analyze:
+  exchange: ${ANALYZE_EXCHANGE:analyze.exchange}
+  heartbeat-sec: ${SSE_HEARTBEAT_SEC:15}
+  token-ttl-hours: ${ANALYZE_TOKEN_TTL_HOURS:24}
+  snapshot-ttl-hours: ${ANALYZE_SNAPSHOT_TTL_HOURS:24}
+  instance-id: ${INSTANCE_ID:${HOSTNAME:local}}
+  cors:
+    allowed-origins: ${ANALYZE_CORS_ALLOWED_ORIGINS:https://gravifox.com}
+  token-grace-sec: ${ANALYZE_TOKEN_GRACE_SEC:300}
+  models:
+    catalog-path: catalog.json
