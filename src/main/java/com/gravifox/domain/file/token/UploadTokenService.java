@@ -99,6 +99,16 @@ public class UploadTokenService {
             return;
         }
         uploadTokenRepository.findByIdForUpdate(context.tokenId()).ifPresent(entity -> {
+            if (!entity.getJti().equals(context.jti())) {
+                log.warn("Upload token {} jti mismatch on success. expected={}, provided={}",
+                        entity.getId(), entity.getJti(), context.jti());
+                throw new UploadTokenUnauthorizedException("업로드 토큰 정보가 일치하지 않아요.");
+            }
+            if (context.uploadId() != null && !entity.getUploadId().equals(context.uploadId())) {
+                log.warn("Upload token {} uploadId mismatch on success. expected={}, provided={}",
+                        entity.getId(), entity.getUploadId(), context.uploadId());
+                throw new UploadTokenUnauthorizedException("업로드 토큰 정보가 일치하지 않아요.");
+            }
             if (entity.getStatus() == UploadTokenStatus.CONSUMED) {
                 return;
             }
@@ -116,6 +126,16 @@ public class UploadTokenService {
         }
         uploadTokenRepository.findByIdForUpdate(context.tokenId()).ifPresent(entity -> {
             String safeReason = (reason == null || reason.isBlank()) ? "unknown" : reason;
+            if (!entity.getJti().equals(context.jti())) {
+                log.warn("Upload token {} jti mismatch on failure. expected={}, provided={}",
+                        entity.getId(), entity.getJti(), context.jti());
+                throw new UploadTokenUnauthorizedException("업로드 토큰 정보가 일치하지 않아요.");
+            }
+            if (context.uploadId() != null && !entity.getUploadId().equals(context.uploadId())) {
+                log.warn("Upload token {} uploadId mismatch on failure. expected={}, provided={}",
+                        entity.getId(), entity.getUploadId(), context.uploadId());
+                throw new UploadTokenUnauthorizedException("업로드 토큰 정보가 일치하지 않아요.");
+            }
             if (entity.getStatus() != UploadTokenStatus.CONSUMED) {
                 entity.markFailed(clock, safeReason);
                 log.debug("Upload token {} marked as failed: {}", entity.getJti(), safeReason);

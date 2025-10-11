@@ -111,7 +111,7 @@ public class SecurityConfig {
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "HEAD", "OPTIONS"));
         corsConfiguration.setAllowedHeaders(List.of(
                 "Authorization", "Cache-Control", "Content-Type", "X-Request-ID",
-                "If-None-Match", "If-Match", "Upload-Token"
+                "If-None-Match", "If-Match", "Upload-Token", "X-Service-Key"
         ));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setMaxAge(3600L);
