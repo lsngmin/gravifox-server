@@ -4,6 +4,7 @@ import com.gravifox.security.jwt.filter.JWTCheckFilter;
 import com.gravifox.security.path.RequestPathMatcher;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserService;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserSuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -48,6 +49,17 @@ public class SecurityConfig {
                         .requestMatchers(RequestPathMatcher.PUBLIC_PATTERNS.toArray(new String[0])).permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(
+                                (request, response, authException) -> {
+                                    if (request.getRequestURI().startsWith("/api/")) {
+                                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                                    } else {
+                                        response.sendRedirect(loginUrl);
+                                    }
+                                }
+                        )
+                )
 //                .authorizeHttpRequests(auth -> auth
 //                        .requestMatchers(
 //                                "/v3/api-docs/**",
@@ -71,6 +83,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo.userService(OAuth2UserService))
                         .successHandler(oAuth2UserSuccessHandler)
                 );
+
 
         return http.build();
     }
