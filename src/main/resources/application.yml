@@ -39,6 +39,9 @@ org:
 upload:
   token:
     service-key: fQhUBKcgvgGabunYdnDtYTXhHgXMhCXTNW
+    disabled: ${UPLOAD_TOKEN_DISABLED:false}
+    disabled-token: ${UPLOAD_TOKEN_DISABLED_TOKEN:}
+    disabled-ttl-seconds: ${UPLOAD_TOKEN_DISABLED_TTL_SECONDS:300}
 
 git-hub:
   repo:
