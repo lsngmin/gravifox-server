@@ -32,4 +32,4 @@ backend:
 
 ai:
   base:
-    url: http://117.17.149.66:8000
+    url: https://ai.gravifox.com:8000/
