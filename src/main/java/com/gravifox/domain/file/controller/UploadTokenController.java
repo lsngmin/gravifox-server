@@ -29,10 +29,21 @@ public class UploadTokenController {
     private final FileService fileService;
     @Value("${upload.token.service-key:}")
     private String serviceKey;
+    @Value("${upload.token.disabled:false}")
+    private boolean uploadTokenDisabled;
+    @Value("${upload.token.disabled-token:}")
+    private String disabledToken;
+    @Value("${upload.token.disabled-ttl-seconds:300}")
+    private long disabledTtlSeconds;
 
     @Operation(summary = "업로드 토큰 발급", description = "사전 등록된 uploadId로 단일 사용 업로드 토큰을 발급합니다.")
     @PostMapping("/upload-token")
     public ResponseEntity<UploadTokenIssueResponse> issueUploadToken(@Valid @RequestBody UploadTokenIssueRequest request) {
+        if (uploadTokenDisabled) {
+            var token = resolveDisabledToken();
+            var expiresAt = java.time.Instant.now().plusSeconds(Math.max(1L, disabledTtlSeconds));
+            return ResponseEntity.ok(new UploadTokenIssueResponse(token, expiresAt, request.uploadId(), "disabled"));
+        }
         UploadTokenService.UploadTokenIssueResult result = uploadTokenService.issueToken(request.uploadId());
         log.debug("Issued upload token uploadId={}, jti={}", result.uploadId(), result.jti());
         return ResponseEntity.ok(new UploadTokenIssueResponse(result.token(), result.expiresAt(), result.uploadId(), result.jti()));
@@ -46,6 +57,14 @@ public class UploadTokenController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 
         verifyServiceKey(internalServiceKey);
+        if (uploadTokenDisabled) {
+            return ResponseEntity.ok(new UploadTokenAuthorizeResponse(
+                    -1L,
+                    null,
+                    "disabled",
+                    java.time.Instant.now().plusSeconds(Math.max(1L, disabledTtlSeconds))
+            ));
+        }
         String tokenValue = resolveUploadToken(authorizationHeader, uploadToken);
         UploadAuthorizationContext context = fileService.authorizeUpload(tokenValue);
         UploadTokenAuthorizeResponse response = new UploadTokenAuthorizeResponse(
@@ -63,6 +82,9 @@ public class UploadTokenController {
             @RequestHeader(value = "X-Service-Key", required = false) String internalServiceKey,
             @Valid @RequestBody UploadTokenFinalizeRequest request) {
         verifyServiceKey(internalServiceKey);
+        if (uploadTokenDisabled) {
+            return ResponseEntity.ok().build();
+        }
         UploadAuthorizationContext context = request.toContext();
         fileService.markUploadSuccess(context);
         return ResponseEntity.ok().build();
@@ -74,6 +96,9 @@ public class UploadTokenController {
             @RequestHeader(value = "X-Service-Key", required = false) String internalServiceKey,
             @Valid @RequestBody UploadTokenFinalizeRequest request) {
         verifyServiceKey(internalServiceKey);
+        if (uploadTokenDisabled) {
+            return ResponseEntity.ok().build();
+        }
         UploadAuthorizationContext context = request.toContext();
         fileService.markUploadFailure(context, request.reason());
         return ResponseEntity.ok().build();
@@ -99,8 +124,18 @@ public class UploadTokenController {
         if (!StringUtils.hasText(serviceKey)) {
             return;
         }
+        if (uploadTokenDisabled) {
+            return;
+        }
         if (!StringUtils.hasText(providedKey) || !serviceKey.equals(providedKey.trim())) {
             throw new UploadTokenUnauthorizedException("업로드 토큰 호출 권한이 없어요.");
         }
+    }
+
+    private String resolveDisabledToken() {
+        if (StringUtils.hasText(disabledToken)) {
+            return disabledToken.trim();
+        }
+        return "dev-upload-token";
     }
 }
