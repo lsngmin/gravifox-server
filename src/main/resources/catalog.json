@@ -1,0 +1,37 @@
+{
+  "defaultKey": "vit_residual_fusion",
+  "items": [
+    {
+      "key": "vit_residual_fusion",
+      "name": "Altair-0.1-fusion",
+      "version": "2025-03",
+      "description": "ViT-B/16 with residual branch and multipatch inference for SNS robustness.",
+      "type": "torch_image",
+      "path": "vit_residual_fusion.pt",
+      "threshold": 0.55,
+      "input": "image",
+      "labels": [
+        "REAL",
+        "FAKE"
+      ],
+      "extras": {
+        "multipatch": true,
+        "aggregate": "mean"
+      }
+    },
+    {
+      "key": "vit_b16_default",
+      "name": "Altair-0.0-alpha",
+      "version": "2025-03",
+      "description": "Baseline ViT-B/16 classifier tuned for SNS imagery.",
+      "type": "torch_image",
+      "path": "vit_b16_default.pt",
+      "threshold": 0.5,
+      "input": "image",
+      "labels": [
+        "REAL",
+        "FAKE"
+      ]
+    }
+  ]
+}
