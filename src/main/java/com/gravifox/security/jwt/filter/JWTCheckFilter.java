@@ -32,6 +32,9 @@ public class JWTCheckFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         String requestUri = request.getRequestURI();
         return RequestPathMatcher.isPublicPath(requestUri);
     }
