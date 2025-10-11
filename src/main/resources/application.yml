@@ -96,3 +96,5 @@ analyze:
   token-grace-sec: ${ANALYZE_TOKEN_GRACE_SEC:300}
   models:
     catalog-path: catalog.json
+  quota:
+    monthly-default: ${ANALYZE_QUOTA_MONTHLY_DEFAULT:100}

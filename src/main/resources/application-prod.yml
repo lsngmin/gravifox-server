@@ -33,3 +33,7 @@ backend:
 ai:
   base:
     url: https://ai.gravifox.com:8000/
+
+analyze:
+  quota:
+    monthly-default: ${ANALYZE_QUOTA_MONTHLY_DEFAULT:100}
