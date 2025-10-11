@@ -1,39 +1,24 @@
 <configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <springProperty scope="context" name="LOG_FILE" source="logging.file.name"/>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [Request-ID: %X{requestId}] %-5level %logger - %msg%n
-            </pattern>
-<!--            <pattern>-->
-<!--                %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger - %msg%n-->
-<!--                [%green(requestId=%X{requestId})] [%blue(ip=%X{ipAddress})] [%yellow(domain=%X{domain})]%n-->
-<!--                [%magenta(ua=%X{userAgent})] [%cyan(os=%X{platform})] [%green(lang=%X{language})]%n-->
-<!--            </pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [Request-ID: %X{requestId}] %-5level %logger - %msg%n</pattern>
         </encoder>
     </appender>
-
-    <appender name="ASPECT_LOGGING" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE:-/var/log/gravifox/app.log}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE:-/var/log/gravifox/app}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
         <encoder>
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [Request-ID: %X{requestId}] %msg%n
-            </pattern>
-            <!--            <pattern>-->
-            <!--                %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger - %msg%n-->
-            <!--                [%green(requestId=%X{requestId})] [%blue(ip=%X{ipAddress})] [%yellow(domain=%X{domain})]%n-->
-            <!--                [%magenta(ua=%X{userAgent})] [%cyan(os=%X{platform})] [%green(lang=%X{language})]%n-->
-            <!--            </pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [Request-ID: %X{requestId}] %-5level %logger - %msg%n</pattern>
         </encoder>
     </appender>
-
-<!--    <logger name = "com.tvb" level="INFO">-->
-<!--        <appender-ref ref="ASPECT_LOGGING"/>-->
-<!--    </logger>-->
-
-    <logger name = "com.gravifox.Application" level="INFO"/>
-    <!-- Enable debug logs for analysis (SSE, MQ, controller) -->
-    <logger name = "com.gravifox.domain.analysis" level="DEBUG"/>
-
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="com.gravifox.domain.analysis" level="DEBUG"/>
     <root level="INFO">
-        <appender-ref ref="ASPECT_LOGGING"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
     </root>
 </configuration>

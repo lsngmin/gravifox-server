@@ -113,13 +113,24 @@ public class AnalyzeJobController {
                 return m;
             });
         } catch (Exception e) {
-            // Spec: MQ 장애 시에도 202 응답. 로깅만 수행.
-            log.warn("Failed to publish analyze.request for jobId={}", jobId, e);
+            log.error("Failed to publish analyze.request for jobId={}, uploadId={}", jobId, req.uploadId(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "analyze_publish_failed");
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("[Analyze] request enqueued jobId={}, quotaRemaining={}", jobId, quotaSnapshot.remaining());
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.LOCATION, "/api/analyze/" + jobId);
         return new ResponseEntity<>(new AnalyzeAcceptedResponse(jobId, token, modelInfo.key(), quotaSnapshot.remaining()), headers, HttpStatus.ACCEPTED);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public void handleUnexpectedException(Exception ex) {
+        log.error("Unexpected error while creating analyze job", ex);
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "analyze_internal_error");
     }
 
     @GetMapping(path = "/api/analyze/models", produces = MediaType.APPLICATION_JSON_VALUE)
