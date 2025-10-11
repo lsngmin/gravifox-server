@@ -49,26 +49,23 @@ public class JWTCheckFilter extends OncePerRequestFilter {
         }
         String headerStr = request.getHeader("Authorization");
         if (!StringUtils.hasText(headerStr)) {
-            if (log.isWarnEnabled()) {
                 log.warn("[AccessToken] Authorization header missing uri={} method={} origin={}",
                         request.getRequestURI(), request.getMethod(), request.getHeader("Origin"));
-            }
+
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
         String trimmed = headerStr.trim();
         if (!trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            if (log.isWarnEnabled()) {
                 log.warn("[AccessToken] Authorization header malformed uri={} preview={}",
                         request.getRequestURI(), maskToken(headerStr));
-            }
+
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
         String accessToken = trimmed.substring(7).trim();
         if (!StringUtils.hasText(accessToken)) {
-            if (log.isWarnEnabled()) {
                 log.warn("[AccessToken] Authorization bearer missing token uri={} preview={}",
                         request.getRequestURI(), maskToken(headerStr));
-            }
+
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
         try {
