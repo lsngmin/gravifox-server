@@ -23,12 +23,16 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
+
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class JWTCheckFilter extends OncePerRequestFilter {
+    private final JWTUtil jwtUtil;
+
     @Autowired
-    private JWTUtil jwtUtil;
+    public JWTCheckFilter(JWTUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
@@ -49,15 +53,10 @@ public class JWTCheckFilter extends OncePerRequestFilter {
         }
         String header = request.getHeader("Authorization");
         if (!StringUtils.hasText(header)) {
+            log.warn("헤더가 없단다.");
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
-        String token = header.trim();
-        if (token.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            token = token.substring(7).trim();
-        }
-        if (!StringUtils.hasText(token)) {
-            throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
-        }
+        String token = header.replaceFirst("(?i)^Bearer\\s+", "").trim();
         try {
             java.util.Map<String, Object> tokenMap = jwtUtil.validateToken(token);
             String userNo = tokenMap.get("userNo").toString();

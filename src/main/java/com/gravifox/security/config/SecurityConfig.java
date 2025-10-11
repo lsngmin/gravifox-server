@@ -1,13 +1,10 @@
 package com.gravifox.security.config;
 
 import com.gravifox.security.jwt.filter.JWTCheckFilter;
-import com.gravifox.security.handler.RestAccessDeniedHandler;
-import com.gravifox.security.handler.RestAuthenticationEntryPoint;
 import com.gravifox.security.path.RequestPathMatcher;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserService;
 import com.gravifox.domain.member.service.oauth2.OAuth2UserSuccessHandler;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,17 +30,12 @@ import java.util.stream.Collectors;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private JWTCheckFilter jwtCheckFilter;
+    private final JWTCheckFilter jwtCheckFilter;
     private final OAuth2UserService OAuth2UserService;
     private final OAuth2UserSuccessHandler oAuth2UserSuccessHandler;
-    private final RestAuthenticationEntryPoint authenticationEntryPoint = new RestAuthenticationEntryPoint();
-    private final RestAccessDeniedHandler accessDeniedHandler = new RestAccessDeniedHandler();
 
     @Value("${front.redirect.login-url:/login}") private String loginUrl;
     @Value("${cors.allowed-origins:*}") private String allowedOrigins;
-
-    @Autowired
-    private void setJwtCheckFilter(JWTCheckFilter jwtCheckFilter) {this.jwtCheckFilter = jwtCheckFilter;}
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -52,10 +44,6 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler)
-                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(RequestPathMatcher.PUBLIC_PATTERNS.toArray(new String[0])).permitAll()
                         .anyRequest().authenticated()
