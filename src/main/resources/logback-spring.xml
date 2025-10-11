@@ -30,7 +30,8 @@
 <!--    </logger>-->
 
     <logger name = "com.gravifox.Application" level="INFO"/>
-    <logger name = "com.gravifox.tvb.domain.analysis" level="DEBUG"/>
+    <!-- Enable debug logs for analysis (SSE, MQ, controller) -->
+    <logger name = "com.gravifox.domain.analysis" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="ASPECT_LOGGING"/>

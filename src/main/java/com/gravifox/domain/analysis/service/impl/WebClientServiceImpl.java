@@ -46,9 +46,9 @@ public class WebClientServiceImpl implements WebClientService {
                 .baseUrl(fastApiUrl) // 주입된 Builder 사용
                 .build();
 
-        // 3) FastAPI가 파일을 받는 엔드포인트여야 함: /predeict/video/ 가 UploadFile 받도록 복구 필요
+        // 3) FastAPI가 파일을 받는 엔드포인트여야 함: /predict/video 가 UploadFile 받도록 복구 필요
         String analyzeResult = client.post()
-                .uri("/predeict/video/") // FastAPI 라우트 이름 오타(predeict) 유지 중이면 동일하게
+                .uri("/predict/video")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(bodyBuilder.build())
                 .retrieve()
@@ -105,7 +105,7 @@ public class WebClientServiceImpl implements WebClientService {
                 .build();
 
         String analyzeResult = webClient.post()
-                .uri("/upload/")
+                .uri("/upload")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(bodyBuilder.build())
                 .retrieve()
