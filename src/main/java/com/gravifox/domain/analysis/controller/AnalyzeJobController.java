@@ -65,6 +65,10 @@ public class AnalyzeJobController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "unauthorized");
         }
         Long userNo = Long.parseLong(userPrincipal.getName());
+        if (log.isInfoEnabled()) {
+            log.info("[Analyze] create request userNo={} uploadId={} modelKey={} authPrincipal={}",
+                    userNo, req.uploadId(), req.modelKey(), authentication.getClass().getSimpleName());
+        }
 
         String jobId = Ulid.generate();
         String token = tokenStore.issue(jobId);

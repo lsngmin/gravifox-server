@@ -16,17 +16,28 @@ public class FileServiceImpl implements FileService {
     @Override
     public UploadAuthorizationContext authorizeUpload(String token) {
         UploadAuthorizationContext context = uploadTokenService.beginConsumption(token);
-        log.debug("Upload token authorized. uploadId={}, jti={}", context.uploadId(), context.jti());
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] begin consumption tokenId={} uploadId={} jti={} expiresAt={}",
+                    context.tokenId(), context.uploadId(), context.jti(), context.expiresAt());
+        }
         return context;
     }
 
     @Override
     public void markUploadSuccess(UploadAuthorizationContext context) {
         uploadTokenService.completeSuccess(context);
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] complete success tokenId={} uploadId={} jti={}",
+                    context.tokenId(), context.uploadId(), context.jti());
+        }
     }
 
     @Override
     public void markUploadFailure(UploadAuthorizationContext context, String reason) {
         uploadTokenService.completeFailure(context, reason);
+        if (log.isWarnEnabled()) {
+            log.warn("[UploadToken] complete failure tokenId={} uploadId={} jti={} reason={}",
+                    context.tokenId(), context.uploadId(), context.jti(), reason);
+        }
     }
 }

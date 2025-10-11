@@ -39,13 +39,22 @@ public class UploadTokenController {
     @Operation(summary = "업로드 토큰 발급", description = "사전 등록된 uploadId로 단일 사용 업로드 토큰을 발급합니다.")
     @PostMapping("/upload-token")
     public ResponseEntity<UploadTokenIssueResponse> issueUploadToken(@Valid @RequestBody UploadTokenIssueRequest request) {
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] issue request uploadId={} disabledMode={}", request.uploadId(), uploadTokenDisabled);
+        }
         if (uploadTokenDisabled) {
             var token = resolveDisabledToken();
             var expiresAt = java.time.Instant.now().plusSeconds(Math.max(1L, disabledTtlSeconds));
+             if (log.isInfoEnabled()) {
+                 log.info("[UploadToken] disabled mode issue -> tokenPreview={}", maskToken(token));
+             }
             return ResponseEntity.ok(new UploadTokenIssueResponse(token, expiresAt, request.uploadId(), "disabled"));
         }
         UploadTokenService.UploadTokenIssueResult result = uploadTokenService.issueToken(request.uploadId());
-        log.debug("Issued upload token uploadId={}, jti={}", result.uploadId(), result.jti());
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] issued uploadId={} jti={} expiresAt={} tokenPreview={}",
+                    result.uploadId(), result.jti(), result.expiresAt(), maskToken(result.token()));
+        }
         return ResponseEntity.ok(new UploadTokenIssueResponse(result.token(), result.expiresAt(), result.uploadId(), result.jti()));
     }
 
@@ -57,6 +66,10 @@ public class UploadTokenController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 
         verifyServiceKey(internalServiceKey);
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] authorize request uploadHeader={} authHeader={}",
+                    maskToken(uploadToken), maskAuthHeader(authorizationHeader));
+        }
         if (uploadTokenDisabled) {
             return ResponseEntity.ok(new UploadTokenAuthorizeResponse(
                     -1L,
@@ -67,6 +80,10 @@ public class UploadTokenController {
         }
         String tokenValue = resolveUploadToken(authorizationHeader, uploadToken);
         UploadAuthorizationContext context = fileService.authorizeUpload(tokenValue);
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] authorize success tokenId={} uploadId={} jti={}",
+                    context.tokenId(), context.uploadId(), context.jti());
+        }
         UploadTokenAuthorizeResponse response = new UploadTokenAuthorizeResponse(
                 context.tokenId(),
                 context.uploadId(),
@@ -83,10 +100,15 @@ public class UploadTokenController {
             @Valid @RequestBody UploadTokenFinalizeRequest request) {
         verifyServiceKey(internalServiceKey);
         if (uploadTokenDisabled) {
+            log.info("[UploadToken] success callback bypassed due to disabled mode uploadId={}", request.uploadId());
             return ResponseEntity.ok().build();
         }
         UploadAuthorizationContext context = request.toContext();
         fileService.markUploadSuccess(context);
+        if (log.isInfoEnabled()) {
+            log.info("[UploadToken] success recorded tokenId={} uploadId={} jti={}",
+                    context.tokenId(), context.uploadId(), context.jti());
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -97,15 +119,21 @@ public class UploadTokenController {
             @Valid @RequestBody UploadTokenFinalizeRequest request) {
         verifyServiceKey(internalServiceKey);
         if (uploadTokenDisabled) {
+            log.info("[UploadToken] failure callback bypassed due to disabled mode uploadId={}", request.uploadId());
             return ResponseEntity.ok().build();
         }
         UploadAuthorizationContext context = request.toContext();
         fileService.markUploadFailure(context, request.reason());
+        if (log.isWarnEnabled()) {
+            log.warn("[UploadToken] failure recorded tokenId={} uploadId={} jti={} reason={}",
+                    context.tokenId(), context.uploadId(), context.jti(), request.reason());
+        }
         return ResponseEntity.ok().build();
     }
 
     private String resolveUploadToken(String authorization, String uploadToken) {
         if (uploadToken != null && !uploadToken.isBlank()) {
+            log.debug("[UploadToken] resolved direct header upload token");
             return uploadToken.trim();
         }
         if (authorization != null) {
@@ -113,10 +141,12 @@ public class UploadTokenController {
             if (value.regionMatches(true, 0, "Bearer ", 0, 7)) {
                 String token = value.substring(7).trim();
                 if (!token.isEmpty()) {
+                    log.debug("[UploadToken] resolved bearer authorization upload token");
                     return token;
                 }
             }
         }
+        log.warn("[UploadToken] missing token in authorize request");
         throw new UploadTokenUnauthorizedException("업로드 토큰이 필요해요.");
     }
 
@@ -137,5 +167,28 @@ public class UploadTokenController {
             return disabledToken.trim();
         }
         return "dev-upload-token";
+    }
+
+    private String maskToken(String token) {
+        if (!StringUtils.hasText(token)) {
+            return "null";
+        }
+        String trimmed = token.trim();
+        int len = trimmed.length();
+        if (len <= 8) {
+            return trimmed.charAt(0) + "***";
+        }
+        return trimmed.substring(0, 4) + "…" + trimmed.substring(len - 4);
+    }
+
+    private String maskAuthHeader(String authorizationHeader) {
+        if (!StringUtils.hasText(authorizationHeader)) {
+            return "null";
+        }
+        String value = authorizationHeader.trim();
+        if (value.length() <= 8) {
+            return value.charAt(0) + "***";
+        }
+        return value.substring(0, Math.min(10, value.length())) + "…";
     }
 }

@@ -50,7 +50,7 @@ public class JWTCheckFilter extends OncePerRequestFilter {
         String headerStr = request.getHeader("Authorization");
         if (!StringUtils.hasText(headerStr)) {
             if (log.isWarnEnabled()) {
-                log.warn("Authorization header missing for uri={}, method={}, origin={}",
+                log.warn("[AccessToken] Authorization header missing uri={} method={} origin={}",
                         request.getRequestURI(), request.getMethod(), request.getHeader("Origin"));
             }
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
@@ -58,14 +58,16 @@ public class JWTCheckFilter extends OncePerRequestFilter {
         String trimmed = headerStr.trim();
         if (!trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
             if (log.isWarnEnabled()) {
-                log.warn("Authorization header malformed for uri={}, value={}", request.getRequestURI(), headerStr);
+                log.warn("[AccessToken] Authorization header malformed uri={} preview={}",
+                        request.getRequestURI(), maskToken(headerStr));
             }
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
         String accessToken = trimmed.substring(7).trim();
         if (!StringUtils.hasText(accessToken)) {
             if (log.isWarnEnabled()) {
-                log.warn("Authorization header without token for uri={}, rawHeader={}", request.getRequestURI(), headerStr);
+                log.warn("[AccessToken] Authorization bearer missing token uri={} preview={}",
+                        request.getRequestURI(), maskToken(headerStr));
             }
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
@@ -88,5 +90,16 @@ public class JWTCheckFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
             throw new BadCredentialsException(ErrorCode.TOKEN_INVALID.getMessage(), e);
         }
+    }
+
+    private String maskToken(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "null";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() <= 8) {
+            return trimmed.charAt(0) + "***";
+        }
+        return trimmed.substring(0, 4) + "…" + trimmed.substring(trimmed.length() - 4);
     }
 }
