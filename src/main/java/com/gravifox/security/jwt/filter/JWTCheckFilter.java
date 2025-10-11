@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -44,10 +45,17 @@ public class JWTCheckFilter extends OncePerRequestFilter {
             return;
         }
         String headerStr = request.getHeader("Authorization");
-        if (headerStr == null || !headerStr.startsWith("Bearer ")) {
+        if (!StringUtils.hasText(headerStr)) {
             throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
         }
-        String accessToken = headerStr.substring(7);
+        String trimmed = headerStr.trim();
+        if (!trimmed.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
+        }
+        String accessToken = trimmed.substring(7).trim();
+        if (!StringUtils.hasText(accessToken)) {
+            throw new BadCredentialsException(ErrorCode.TOKEN_NOT_FOUND.getMessage());
+        }
         try {
             java.util.Map<String, Object> tokenMap = jwtUtil.validateToken(accessToken);
             String userNo = tokenMap.get("userNo").toString();
