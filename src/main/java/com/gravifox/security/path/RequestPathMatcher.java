@@ -47,7 +47,7 @@ public final class RequestPathMatcher {
             "/api/analyze/models",
             "/upload",
             "/upload/**",
-            "/api/v1/files/upload"
+            "/api/.well-known/**"
     );
 
     private RequestPathMatcher() {}
