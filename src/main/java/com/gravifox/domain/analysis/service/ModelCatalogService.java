@@ -5,33 +5,35 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class ModelCatalogService {
     private static final Logger log = LoggerFactory.getLogger(ModelCatalogService.class);
 
-    private final Path catalogPath;
+    private final String catalogPath;
     private final ObjectMapper objectMapper;
+    private final ResourceLoader resourceLoader;
     private final AtomicReference<Cache> cache = new AtomicReference<>();
 
-    public ModelCatalogService(@Value("${analyze.models.catalog-path:tvb-ai/tvb-server/models/catalog.json}") String catalogPath,
-                               ObjectMapper objectMapper) {
-        this.catalogPath = Path.of(catalogPath).toAbsolutePath().normalize();
+    public ModelCatalogService(
+            @Value("${analyze.models.catalog-path:catalog.json}") String catalogPath,
+            ObjectMapper objectMapper,
+            ResourceLoader resourceLoader
+    ) {
+        this.catalogPath = catalogPath;
         this.objectMapper = objectMapper;
-        log.info("Model catalog path resolved to {}", this.catalogPath);
+        this.resourceLoader = resourceLoader;
+        log.info("Model catalog path configured as {}", this.catalogPath);
     }
 
     public CatalogData fetchCatalog() {
@@ -65,9 +67,7 @@ public class ModelCatalogService {
             return catalog.items().stream()
                     .filter(m -> m.key().equals(defaultKey))
                     .findFirst()
-                    .orElseGet(() -> {
-                        throw new IllegalStateException("default model key not found in catalog");
-                    });
+                    .orElseThrow(() -> new IllegalStateException("default model key not found in catalog"));
         }
         return catalog.items().stream()
                 .findFirst()
@@ -92,19 +92,21 @@ public class ModelCatalogService {
         return summaries;
     }
 
+    // --------- Internal helpers ---------
     private CatalogData loadCatalog() {
-        if (!Files.exists(catalogPath)) {
-            throw new IllegalStateException("model catalog not found: " + catalogPath);
+        Resource resource = resolveResource();
+        if (!resource.exists()) {
+            throw new IllegalStateException("model catalog not found: " + resource.getDescription());
         }
-        try (var reader = Files.newBufferedReader(catalogPath)) {
-            JsonNode root = objectMapper.readTree(reader);
+
+        try (InputStream in = resource.getInputStream()) {
+            JsonNode root = objectMapper.readTree(in);
             String defaultKey = textNode(root.path("defaultKey"));
             List<ModelInfo> models = new ArrayList<>();
+
             for (JsonNode item : root.path("items")) {
                 String key = textNode(item.path("key"));
-                if (key == null || key.isBlank()) {
-                    continue;
-                }
+                if (key == null || key.isBlank()) continue;
                 ModelInfo info = new ModelInfo(
                         key.trim(),
                         defaultText(item.path("name"), key),
@@ -118,23 +120,46 @@ public class ModelCatalogService {
                 );
                 models.add(info);
             }
+
             if (models.isEmpty()) {
-                throw new IllegalStateException("model catalog contains no items: " + catalogPath);
+                throw new IllegalStateException("model catalog contains no items: " + resource.getDescription());
             }
+
+            log.info("Loaded {} models from {}", models.size(), resource.getDescription());
             return new CatalogData(defaultKey, Collections.unmodifiableList(models));
         } catch (IOException e) {
-            throw new IllegalStateException("failed to read model catalog: " + catalogPath, e);
+            throw new IllegalStateException("failed to read model catalog: " + resource.getDescription(), e);
         }
+    }
+
+    private Resource resolveResource() {
+        // 1️⃣ 직접 지정된 경로
+        Resource res = resourceLoader.getResource(catalogPath);
+        if (res.exists()) return res;
+
+        // 2️⃣ classpath:/static fallback
+        Resource staticRes = resourceLoader.getResource("classpath:/static/" + catalogPath);
+        if (staticRes.exists()) return staticRes;
+
+        // 3️⃣ classpath:/ fallback
+        Resource rootRes = resourceLoader.getResource("classpath:/" + catalogPath);
+        if (rootRes.exists()) return rootRes;
+
+        log.warn("Model catalog not found via {}, trying fallback paths", catalogPath);
+        return res; // return original (will cause not found error later)
     }
 
     private FileTime lastModified() {
         try {
-            return Files.getLastModifiedTime(catalogPath);
-        } catch (IOException e) {
-            throw new IllegalStateException("failed to read catalog timestamp: " + catalogPath, e);
-        }
+            Resource res = resolveResource();
+            if (res.isFile()) {
+                return Files.getLastModifiedTime(res.getFile().toPath());
+            }
+        } catch (Exception ignored) {}
+        return FileTime.fromMillis(0);
     }
 
+    // --------- Utility methods ---------
     private static List<String> parseLabels(JsonNode node) {
         if (node == null || node.isMissingNode() || !node.isArray()) {
             return List.of();
@@ -142,9 +167,7 @@ public class ModelCatalogService {
         List<String> labels = new ArrayList<>();
         node.forEach(n -> {
             String v = textNode(n);
-            if (v != null && !v.isBlank()) {
-                labels.add(v.trim());
-            }
+            if (v != null && !v.isBlank()) labels.add(v.trim());
         });
         return List.copyOf(labels);
     }
@@ -154,7 +177,7 @@ public class ModelCatalogService {
             return null;
         }
         String text = node.asText(null);
-        return text != null && !text.isBlank() ? text : null;
+        return (text != null && !text.isBlank()) ? text : null;
     }
 
     private static String defaultText(JsonNode node, String fallback) {
