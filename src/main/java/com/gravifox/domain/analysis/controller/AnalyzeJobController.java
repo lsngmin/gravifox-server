@@ -127,10 +127,12 @@ public class AnalyzeJobController {
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public void handleUnexpectedException(Exception ex) {
+        if (ex instanceof ResponseStatusException rse) {
+            throw rse;
+        }
         log.error("Unexpected error while creating analyze job", ex);
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "analyze_internal_error");
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "analyze_internal_error", ex);
     }
 
     @GetMapping(path = "/api/analyze/models", produces = MediaType.APPLICATION_JSON_VALUE)
