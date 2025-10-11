@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -39,54 +40,36 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins:*}") private String allowedOrigins;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain apiChain(HttpSecurity http) throws Exception {
         http
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable)
+                .securityMatcher("/api/**")
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(a -> a
                         .requestMatchers(RequestPathMatcher.PUBLIC_PATTERNS.toArray(new String[0])).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(
-                                (request, response, authException) -> {
-                                    if (request.getRequestURI().startsWith("/api/")) {
-                                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                                    } else {
-                                        response.sendRedirect(loginUrl);
-                                    }
-                                }
-                        )
-                )
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(
-//                                "/v3/api-docs/**",
-//                                "/swagger-ui/**",
-//                                "/swagger-ui.html",
-//                                "/docs/**",
-//                                "/api/upload-swagger",
-//                                "/health/**",
-//                                "/api/v1/register/**",
-//                                "/api/v1/auth/login",
-//                                "/api/v1/auth/refresh",
-//                                "/api/v1/auth/email/**"
-//                        ).permitAll()
-//                        .anyRequest().authenticated()
-//                )
-
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .oauth2Login(oauth -> oauth
-                        .loginPage(loginUrl)
-                        .userInfoEndpoint(userInfo -> userInfo.userService(OAuth2UserService))
-                        .successHandler(oAuth2UserSuccessHandler)
-                );
-
-
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+                ))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
         return http.build();
     }
+
+    @Bean
+    @Order(2)
+    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+                .oauth2Login(oauth -> oauth
+                        .loginPage(loginUrl)
+                        .userInfoEndpoint(u -> u.userService(OAuth2UserService))
+                        .successHandler(oAuth2UserSuccessHandler)
+                );
+        return http.build();
+    }
+
 
 
     @Bean
