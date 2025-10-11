@@ -2,8 +2,10 @@ package com.gravifox.domain.analysis.controller;
 
 import com.gravifox.domain.analysis.id.Ulid;
 import com.gravifox.domain.analysis.service.ModelCatalogService;
+import com.gravifox.domain.analysis.service.AnalyzeUsageService;
 import com.gravifox.domain.analysis.sse.SseHub;
 import com.gravifox.domain.analysis.sse.TokenStore;
+import com.gravifox.security.jwt.principal.UserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -35,25 +38,34 @@ public class AnalyzeJobController {
     private final SseHub sseHub;
     private final String analyzeExchange;
     private final ModelCatalogService modelCatalogService;
+    private final AnalyzeUsageService analyzeUsageService;
 
     public AnalyzeJobController(RabbitTemplate rabbitTemplate,
                                 TokenStore tokenStore,
                                 SseHub sseHub,
                                 @Value("${analyze.exchange:analyze.exchange}") String analyzeExchange,
-                                ModelCatalogService modelCatalogService) {
+                                ModelCatalogService modelCatalogService,
+                                AnalyzeUsageService analyzeUsageService) {
         this.rabbitTemplate = rabbitTemplate;
         this.tokenStore = tokenStore;
         this.sseHub = sseHub;
         this.analyzeExchange = analyzeExchange;
         this.modelCatalogService = modelCatalogService;
+        this.analyzeUsageService = analyzeUsageService;
     }
 
     public static record AnalyzeCreateRequest(@NotBlank String uploadId, Map<String, Object> params, String modelKey) {}
-    public static record AnalyzeAcceptedResponse(String jobId, String sseToken, String modelKey) {}
+    public static record AnalyzeAcceptedResponse(String jobId, String sseToken, String modelKey, Integer remainingQuota) {}
     public static record ModelCatalogResponse(String defaultKey, List<ModelCatalogService.ModelSummary> items) {}
 
     @PostMapping(path = "/api/analyze", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AnalyzeAcceptedResponse> createAnalyzeJob(@Valid @RequestBody AnalyzeCreateRequest req) {
+    public ResponseEntity<AnalyzeAcceptedResponse> createAnalyzeJob(@Valid @RequestBody AnalyzeCreateRequest req,
+                                                                    Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal userPrincipal)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "unauthorized");
+        }
+        Long userNo = Long.parseLong(userPrincipal.getName());
+
         String jobId = Ulid.generate();
         String token = tokenStore.issue(jobId);
         if (log.isDebugEnabled()) {
@@ -72,6 +84,7 @@ public class AnalyzeJobController {
         // Build MQ payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("jobId", jobId);
+        payload.put("userNo", userNo);
         payload.put("uploadId", req.uploadId());
         payload.put("model", Map.of(
                 "key", modelInfo.key(),
@@ -86,6 +99,13 @@ public class AnalyzeJobController {
         mergedParams.put("modelKey", modelInfo.key());
         payload.put("params", mergedParams);
 
+        AnalyzeUsageService.QuotaSnapshot quotaSnapshot = analyzeUsageService.prepareNewJob(
+                userNo,
+                jobId,
+                req.uploadId(),
+                modelInfo.key()
+        );
+
         try {
             rabbitTemplate.convertAndSend(analyzeExchange, "analyze.request", payload, m -> {
                 m.getMessageProperties().setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -99,7 +119,7 @@ public class AnalyzeJobController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.LOCATION, "/api/analyze/" + jobId);
-        return new ResponseEntity<>(new AnalyzeAcceptedResponse(jobId, token, modelInfo.key()), headers, HttpStatus.ACCEPTED);
+        return new ResponseEntity<>(new AnalyzeAcceptedResponse(jobId, token, modelInfo.key(), quotaSnapshot.remaining()), headers, HttpStatus.ACCEPTED);
     }
 
     @GetMapping(path = "/api/analyze/models", produces = MediaType.APPLICATION_JSON_VALUE)

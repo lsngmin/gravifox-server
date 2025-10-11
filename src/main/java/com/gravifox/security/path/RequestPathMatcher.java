@@ -14,6 +14,27 @@ public final class RequestPathMatcher {
     // 인증 없이 허용할 엔드포인트 패턴들
     public static final List<String> PUBLIC_PATTERNS = List.of(
             "/health/**",
+            "/",
+            "/index.html",
+            "/favicon.ico",
+            "/manifest.json",
+            "/robots.txt",
+            "/static/**",
+            "/assets/**",
+            "/logo*.png",
+            "/service-worker.js",
+            "/*/index.html",
+            "/*/manifest.json",
+            "/*/favicon.ico",
+            "/*/robots.txt",
+            "/analyze/**",
+            "/feature/**",
+            "/pricing/**",
+            "/docs/**",
+            "/blog/**",
+            "/support/**",
+            "/en/**",
+            "/ko/**",
             "/docs/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -22,7 +43,8 @@ public final class RequestPathMatcher {
             "/api/v1/register/**",
             "/api/v1/auth/**",
             "/api/v1/auth/email/**",
-            "/api/analyze/**",
+            "/api/analyze/*/events",
+            "/api/analyze/models",
             "/upload",
             "/upload/**",
             "/api/v1/files/upload"
@@ -38,4 +60,3 @@ public final class RequestPathMatcher {
         return false;
     }
 }
-

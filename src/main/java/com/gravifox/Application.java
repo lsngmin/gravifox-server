@@ -1,9 +1,12 @@
 package com.gravifox;
 
+import com.gravifox.domain.analysis.config.AnalyzeQuotaProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(AnalyzeQuotaProperties.class)
 public class Application {
 
 	public static void main(String[] args) {

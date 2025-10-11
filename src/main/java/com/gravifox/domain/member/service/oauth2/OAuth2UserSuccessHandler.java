@@ -16,6 +16,9 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Optional;
 
 @Slf4j
@@ -78,7 +81,49 @@ public class OAuth2UserSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         } else {
             log.warn("OAuth2 login succeeded but user not found for email={}", socialId);
         }
-        log.info("url received: {}", url);
-        response.sendRedirect(url);
+        String targetUrl = resolveRedirectTarget(request, response);
+        log.info("Redirecting user={} to {}", socialId, targetUrl);
+        response.sendRedirect(targetUrl);
+    }
+
+    private String resolveRedirectTarget(HttpServletRequest request, HttpServletResponse response) {
+        String fallback = url;
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null || cookies.length == 0) {
+            return fallback;
+        }
+        Optional<Cookie> returnCookie = Arrays.stream(cookies)
+                .filter(cookie -> "oauthReturn".equals(cookie.getName()))
+                .findFirst();
+        if (returnCookie.isEmpty()) {
+            return fallback;
+        }
+        String decoded;
+        try {
+            decoded = URLDecoder.decode(returnCookie.get().getValue(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            decoded = null;
+        }
+
+        Cookie clearCookie = new Cookie("oauthReturn", null);
+        clearCookie.setPath("/");
+        clearCookie.setMaxAge(0);
+        clearCookie.setHttpOnly(false);
+        clearCookie.setSecure(cookieSecure);
+        clearCookie.setAttribute("SameSite", cookieSameSite);
+        response.addCookie(clearCookie);
+        String sanitized = sanitizeRedirect(decoded);
+        return sanitized != null ? sanitized : fallback;
+    }
+
+    private String sanitizeRedirect(String value) {
+        if (value == null || value.isBlank()) return null;
+        if (value.startsWith("http://") || value.startsWith("https://")) {
+            return null;
+        }
+        if (!value.startsWith("/")) {
+            return "/" + value;
+        }
+        return value;
     }
 }

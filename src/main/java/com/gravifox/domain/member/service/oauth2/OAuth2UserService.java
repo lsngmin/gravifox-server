@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -46,32 +47,52 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private SocialLogin registerSocial(String providerId, String email, String name) {
-        User user = User.builder()
-                .userId(email)
-                .loginType(LoginType.GOOGLE)
-                .build();
-        userRepository.save(user);
+        User existingUser = userRepository.findByUserId(email).orElse(null);
+        User persistedUser;
+        if (existingUser == null) {
+            User newUser = User.builder()
+                    .userId(email)
+                    .loginType(LoginType.GOOGLE)
+                    .emailVerified(true)
+                    .build();
+            persistedUser = userRepository.save(newUser);
+        } else {
+            persistedUser = existingUser;
+        }
 
-        log.info("New user registered via social login: userId={}, email={}", user.getUserId(), email);
+        if (!Boolean.TRUE.equals(persistedUser.getEmailVerified())) {
+            persistedUser.verifyEmail();
+            userRepository.save(persistedUser);
+        }
 
-        Profile profile = Profile.builder()
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .nickname(name)
-                .user(user)
-                .build();
-        profileRepository.save(profile);
-        // 양방향 관계 동기화
-        user.setProfile(profile);
-        log.info("Profile created for social login: nickname={}", name);
+        final User user = persistedUser;
 
-        Password password = Password.builder()
-                .password(java.util.UUID.randomUUID().toString())
-                .updatedAt(LocalDateTime.now())
-                .user(user)
-                .build();
-        passwordRepository.save(password);
-        log.info("{}", password);
+        profileRepository.findByUser(user).orElseGet(() -> {
+            String baseNickname = (name != null && !name.isBlank()) ? name : email;
+            String nickname = generateUniqueNickname(baseNickname);
+            Profile profile = Profile.builder()
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .nickname(nickname)
+                    .user(user)
+                    .build();
+            Profile saved = profileRepository.save(profile);
+            user.setProfile(saved);
+            return saved;
+        });
+
+        passwordRepository.findByUser(user).orElseGet(() -> passwordRepository.save(
+                Password.builder()
+                        .password(java.util.UUID.randomUUID().toString())
+                        .updatedAt(LocalDateTime.now())
+                        .user(user)
+                        .build()
+        ));
+
+        Optional<SocialLogin> existingSocial = socialLoginRepository.findByUser(user);
+        if (existingSocial.isPresent()) {
+            return existingSocial.get();
+        }
 
         return socialLoginRepository.save(SocialLogin.builder()
                 .providerId(providerId)
@@ -79,5 +100,23 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 .user(user)
                 .build()
         );
+    }
+
+    private String generateUniqueNickname(String base) {
+        String sanitized = base == null ? "user" : base.trim();
+        if (sanitized.isEmpty()) {
+            sanitized = "user";
+        }
+        String candidate = sanitized;
+        int suffix = 1;
+        while (profileRepository.findByNickname(candidate).isPresent()) {
+            candidate = sanitized + suffix;
+            suffix++;
+            if (suffix > 1000) {
+                candidate = sanitized + java.util.UUID.randomUUID().toString().substring(0, 8);
+                break;
+            }
+        }
+        return candidate;
     }
 }

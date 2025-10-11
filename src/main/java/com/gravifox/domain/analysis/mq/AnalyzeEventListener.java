@@ -2,6 +2,7 @@ package com.gravifox.domain.analysis.mq;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gravifox.domain.analysis.service.AnalyzeUsageService;
 import com.gravifox.domain.analysis.sse.SseHub;
 import com.gravifox.domain.analysis.sse.TokenStore;
 import org.slf4j.Logger;
@@ -21,11 +22,14 @@ public class AnalyzeEventListener {
     private final ObjectMapper objectMapper;
     private final SseHub sseHub;
     private final TokenStore tokenStore;
+    private final AnalyzeUsageService analyzeUsageService;
 
-    public AnalyzeEventListener(ObjectMapper objectMapper, SseHub sseHub, TokenStore tokenStore) {
+    public AnalyzeEventListener(ObjectMapper objectMapper, SseHub sseHub, TokenStore tokenStore,
+                                AnalyzeUsageService analyzeUsageService) {
         this.objectMapper = objectMapper;
         this.sseHub = sseHub;
         this.tokenStore = tokenStore;
+        this.analyzeUsageService = analyzeUsageService;
     }
 
     @RabbitListener(queues = "#{analyzeBridgeQueue.name}")
@@ -49,6 +53,19 @@ public class AnalyzeEventListener {
 
         try {
             sseHub.send(jobId, event, payload);
+            if ("result".equals(event)) {
+                try {
+                    analyzeUsageService.markJobCompleted(jobId);
+                } catch (Exception e) {
+                    log.warn("Failed to mark quota completion for jobId={}", jobId, e);
+                }
+            } else if ("failed".equals(event)) {
+                try {
+                    analyzeUsageService.markJobFailed(jobId);
+                } catch (Exception e) {
+                    log.warn("Failed to mark quota failure for jobId={}", jobId, e);
+                }
+            }
             if ("result".equals(event) || "failed".equals(event)) {
                 if (log.isDebugEnabled()) {
                     log.debug("[MQ] event={} triggers token invalidate for jobId={}", event, jobId);

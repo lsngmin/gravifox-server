@@ -13,5 +13,7 @@ public interface SocialLoginRepository extends JpaRepository<SocialLogin, Long> 
     @Query("SELECT s.user FROM SocialLogin s WHERE s.socialId = :socialId")
     Optional<User> findUserBySocialId(String socialId);
 
+    Optional<SocialLogin> findByUser(User user);
+
     void deleteByUser(User user);
 }
