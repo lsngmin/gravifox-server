@@ -102,6 +102,6 @@ analyze:
     allowed-origins: ${ANALYZE_CORS_ALLOWED_ORIGINS:https://gravifox.com}
   token-grace-sec: ${ANALYZE_TOKEN_GRACE_SEC:300}
   models:
-    catalog-path: catalog.json
+    catalog-path: classpath:/static/catalog.json
   quota:
     monthly-default: ${ANALYZE_QUOTA_MONTHLY_DEFAULT:100}
