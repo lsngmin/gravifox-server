@@ -8,6 +8,9 @@ import com.gravifox.domain.analysis.sse.TokenStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.Exchange;
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +35,15 @@ public class AnalyzeEventListener {
         this.analyzeUsageService = analyzeUsageService;
     }
 
-    @RabbitListener(queues = "#{analyzeBridgeQueue.name}")
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(value = "#{analyzeBridgeQueue.name}", durable = "true"),
+            exchange = @Exchange(value = "#{analyzeExchange.name}", type = "topic"),
+            key = {
+                    "analyze.progress.*",
+                    "analyze.result.*",
+                    "analyze.failed.*"
+            }
+    ))
     public void handle(Message message) {
         String routing = message.getMessageProperties().getReceivedRoutingKey();
         String event = extractEvent(routing);
