@@ -76,7 +76,10 @@ public class SseHub {
                         .name(event)
                         .data(data, MediaType.APPLICATION_JSON);
                 emitter.send(builder);
-            } catch (IOException e) {
+            } catch (IOException | IllegalStateException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("[SSE] emitter unusable for jobId={}, removing (event={})", jobId, event);
+                }
                 toRemove.add(emitter);
             }
         }
