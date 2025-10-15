@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
@@ -77,6 +78,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<?> handleAccessDenied(org.springframework.security.access.AccessDeniedException e, HttpServletRequest request) {
         return toResponse(ErrorCode.INVALID_CREDENTIALS, request);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<?> handleResponseStatus(ResponseStatusException e) {
+        String code = Optional.ofNullable(e.getStatusCode()).map(Object::toString).orElse("BAD_REQUEST");
+        String message = Optional.ofNullable(e.getReason()).orElse("Invalid request.");
+        ErrorMessageMap body = new ErrorMessageMap(code, message);
+        return ResponseEntity.status(e.getStatusCode()).body(body);
     }
 
     @ExceptionHandler(Exception.class)

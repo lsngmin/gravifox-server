@@ -25,7 +25,9 @@ public enum ErrorCode {
     INVALID_NICKNAME_ERROR(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_NICKNAME_ERROR", "NickName cannot be blank"),
     INVALID_LOGINTYPE_ERROR(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_LOGINTYPE_ERROR", "The request data contains invalid fields"),
 
-    USER_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "USER_NOT_FOUND", "User information could not be found.");
+    USER_NOT_FOUND(HttpStatus.UNPROCESSABLE_ENTITY, "USER_NOT_FOUND", "User information could not be found."),
+
+    ANALYSIS_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "ANALYSIS_REPORT_NOT_FOUND", "분석 리포트를 찾을 수 없습니다.");
 
 
     private final HttpStatus httpStatus;
