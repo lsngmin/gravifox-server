@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -76,6 +77,11 @@ public class SseHub {
                         .name(event)
                         .data(data, MediaType.APPLICATION_JSON);
                 emitter.send(builder);
+            } catch (AsyncRequestNotUsableException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("[SSE] emitter unusable for jobId={}, removing (event={})", jobId, event);
+                }
+                toRemove.add(emitter);
             } catch (IOException | IllegalStateException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("[SSE] emitter unusable for jobId={}, removing (event={})", jobId, event);
