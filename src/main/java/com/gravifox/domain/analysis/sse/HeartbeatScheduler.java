@@ -39,8 +39,13 @@ public class HeartbeatScheduler {
         int total = 0;
         for (String jobId : sseHub.jobIds()) {
             if (sseHub.activeCount(jobId) > 0) {
-                sseHub.send(jobId, "heartbeat", hb);
-                total++;
+                try {
+                    sseHub.send(jobId, "heartbeat", hb);
+                    total++;
+                } catch (RuntimeException e) {
+                    log.debug("[Heartbeat] failed for jobId={}, cleaning up emitter", jobId, e);
+                    sseHub.complete(jobId);
+                }
             }
         }
         if (total > 0 && heartbeatSec >= 10) {
