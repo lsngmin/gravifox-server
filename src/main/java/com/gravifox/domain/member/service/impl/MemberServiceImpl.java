@@ -45,6 +45,7 @@ public class MemberServiceImpl implements MemberService {
                             .loginType(user.getLoginType().name())
                             .nickname(user.getProfile().getNickname())
                             .createdAt(user.getProfile().getCreatedAt())
+                            .updatedAt(user.getProfile().getUpdatedAt())
                             .build();
                 })
                 .orElseThrow(() -> new UserNotFoundException(userNo));
@@ -111,6 +112,7 @@ public class MemberServiceImpl implements MemberService {
                 .loginType(user.getLoginType().name())
                 .nickname(profile.getNickname())
                 .createdAt(profile.getCreatedAt())
+                .updatedAt(profile.getUpdatedAt())
                 .build();
     }
 }

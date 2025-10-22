@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
       "userId": "user@example.com",
       "loginType": "EMAIL",
       "nickname": "hellojungjae",
-      "createdAt": "2024-05-01T15:20:00"
+      "createdAt": "2024-05-01T15:20:00",
+      "updatedAt": "2024-05-09T11:00:00"
     }
     """
 )
@@ -33,6 +34,9 @@ public class MyInfoResponse implements AuthDTO {
 
     @Schema(description = "회원 가입일", example = "2024-05-01T15:20:00")
     private final LocalDateTime createdAt;
+
+    @Schema(description = "프로필 최신 수정일", example = "2024-05-09T11:00:00")
+    private final LocalDateTime updatedAt;
 
     @Override
     public String extractUserID() {
