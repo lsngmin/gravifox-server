@@ -2,11 +2,12 @@ package com.gravifox.domain.admin.service;
 
 import com.gravifox.domain.admin.dto.AdminUserSummaryQueryResult;
 import com.gravifox.domain.admin.dto.AdminUserSummaryResponse;
+import com.gravifox.domain.analysis.domain.AnalyzeMonthlyQuota;
+import com.gravifox.domain.analysis.repository.AnalyzeMonthlyQuotaRepository;
 import com.gravifox.domain.member.repository.UserRepository;
 import com.gravifox.domain.analysisreport.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
 import java.time.YearMonth;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +26,7 @@ public class AdminUserService {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final UserRepository userRepository;
+    private final AnalyzeMonthlyQuotaRepository analyzeMonthlyQuotaRepository;
 
     public PageResponse<AdminUserSummaryResponse> getUserSummaries(String keyword, Pageable pageable) {
         Pageable sanitized = sanitizePageable(pageable);
@@ -35,6 +36,17 @@ public class AdminUserService {
         Page<AdminUserSummaryResponse> mapped = page.map(AdminUserSummaryResponse::from);
 
         return PageResponse.from(mapped);
+    }
+
+    @Transactional
+    public void resetMonthlyUsage(Long userNo) {
+        YearMonth currentMonth = YearMonth.now(KST);
+        analyzeMonthlyQuotaRepository.findByUserNoAndYearAndMonth(
+                        userNo,
+                        currentMonth.getYear(),
+                        currentMonth.getMonthValue()
+                )
+                .ifPresent(AnalyzeMonthlyQuota::resetUsage);
     }
 
     private Pageable sanitizePageable(Pageable pageable) {
@@ -50,4 +62,3 @@ public class AdminUserService {
         return PageRequest.of(pageNumber, pageSize, sort);
     }
 }
-

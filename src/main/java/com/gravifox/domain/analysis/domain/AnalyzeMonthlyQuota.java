@@ -95,6 +95,11 @@ public class AnalyzeMonthlyQuota {
         touch();
     }
 
+    public void resetUsage() {
+        this.usedCount = 0;
+        touch();
+    }
+
     public void touch() {
         this.updatedAt = LocalDateTime.now(KST);
     }
