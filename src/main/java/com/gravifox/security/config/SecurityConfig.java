@@ -66,6 +66,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
+                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/**").permitAll()
                         .requestMatchers(RequestPathMatcher.PUBLIC_PATTERNS.toArray(new String[0])).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtCheckFilter, UsernamePasswordAuthenticationFilter.class)
