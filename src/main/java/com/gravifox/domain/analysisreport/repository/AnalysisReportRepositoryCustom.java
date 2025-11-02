@@ -1,5 +1,6 @@
 package com.gravifox.domain.analysisreport.repository;
 
+import com.gravifox.domain.admin.dto.AdminAnalysisRecentQueryResult;
 import com.gravifox.domain.analysisreport.domain.AnalysisMediaType;
 import com.gravifox.domain.analysisreport.dto.AnalysisReportDetailResponse;
 import com.gravifox.domain.analysisreport.dto.AnalysisReportListItem;
@@ -20,4 +21,6 @@ public interface AnalysisReportRepositoryCustom {
     List<AnalysisReportVersionStat> aggregateVersionStats(Long userNo, String modelVersion);
 
     Optional<AnalysisReportSummaryStat> aggregateSummary(Long userNo, AnalysisMediaType mediaType);
+
+    List<AdminAnalysisRecentQueryResult> findLatestReports(int limit);
 }

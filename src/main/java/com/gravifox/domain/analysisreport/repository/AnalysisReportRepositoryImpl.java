@@ -1,5 +1,6 @@
 package com.gravifox.domain.analysisreport.repository;
 
+import com.gravifox.domain.admin.dto.AdminAnalysisRecentQueryResult;
 import com.gravifox.domain.analysisreport.domain.AnalysisLabel;
 import com.gravifox.domain.analysisreport.domain.AnalysisMediaType;
 import com.gravifox.domain.analysisreport.domain.QAnalysisReport;
@@ -7,6 +8,8 @@ import com.gravifox.domain.analysisreport.dto.AnalysisReportDetailResponse;
 import com.gravifox.domain.analysisreport.dto.AnalysisReportListItem;
 import com.gravifox.domain.analysisreport.dto.AnalysisReportSummaryStat;
 import com.gravifox.domain.analysisreport.dto.AnalysisReportVersionStat;
+import com.gravifox.domain.member.domain.QProfile;
+import com.gravifox.domain.member.domain.user.QUser;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Order;
@@ -214,6 +217,35 @@ public class AnalysisReportRepositoryImpl implements AnalysisReportRepositoryCus
                 Optional.ofNullable(tuple.get(avgInference)).orElse(null),
                 tuple.get(latestCreated)
         ));
+    }
+
+    @Override
+    public List<AdminAnalysisRecentQueryResult> findLatestReports(int limit) {
+        int sanitizedLimit = limit <= 0 ? 10 : Math.min(limit, 100);
+
+        QUser user = QUser.user;
+        QProfile profile = QProfile.profile;
+
+        return queryFactory
+                .select(Projections.constructor(
+                        AdminAnalysisRecentQueryResult.class,
+                        user.userNo,
+                        user.userId,
+                        profile.nickname,
+                        report.uploadId,
+                        report.label,
+                        report.mediaType,
+                        report.score,
+                        report.modelVersion,
+                        report.inferenceTimeMs,
+                        report.createdAt
+                ))
+                .from(report)
+                .join(report.user, user)
+                .leftJoin(profile).on(profile.user.eq(user))
+                .orderBy(report.createdAt.desc(), report.id.desc())
+                .limit(sanitizedLimit)
+                .fetch();
     }
 
     private Pageable applyDefaultSort(Pageable pageable) {
