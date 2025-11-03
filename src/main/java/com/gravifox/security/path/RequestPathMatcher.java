@@ -36,6 +36,7 @@ public final class RequestPathMatcher {
             "/en/**",
             "/ko/**",
             "/docs/**",
+            "/api/v1/blog/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-resources/**",
