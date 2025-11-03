@@ -4,6 +4,8 @@ import com.gravifox.domain.blog.domain.BlogPost;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public record BlogPostResponse(
         Long id,
@@ -26,9 +28,20 @@ public record BlogPostResponse(
                 post.getContent(),
                 post.getPublishedAt(),
                 post.getReadTimeMinutes(),
-                List.copyOf(post.getTags()),
+                normalizeTags(post.getTags()),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
+    }
+
+    private static List<String> normalizeTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return List.of();
+        }
+        return tags.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toUnmodifiableList());
     }
 }
