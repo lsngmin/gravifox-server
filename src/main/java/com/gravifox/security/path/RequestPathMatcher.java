@@ -41,6 +41,7 @@ public final class RequestPathMatcher {
             "/swagger-ui/**",
             "/swagger-resources/**",
             "/api/upload-swagger",
+            "/api/v1/register",
             "/api/v1/register/**",
             "/api/v1/auth/**",
             "/api/v1/auth/email/**",

@@ -4,6 +4,7 @@ import com.gravifox.domain.member.exception.common.ErrorCode;
 import com.gravifox.domain.member.exception.common.ErrorMessageMap;
 import com.gravifox.exception.GlobalException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     private static ResponseEntity<?> toResponse(ErrorCode code, HttpServletRequest request) {
@@ -62,6 +64,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GlobalException.class)
     public ResponseEntity<?> handleGlobal(GlobalException e, HttpServletRequest request) {
+        try {
+            log.warn("[GlobalException] id={} method={} uri={} code={} message={}",
+                    request != null ? request.getHeader("X-Request-ID") : null,
+                    request != null ? request.getMethod() : null,
+                    request != null ? request.getRequestURI() : null,
+                    e.getErrorCode() != null ? e.getErrorCode().getCode() : null,
+                    e.getMessage());
+        } catch (Exception ignore) { }
         return toResponse(e.getErrorCode(), request);
     }
 
@@ -90,6 +100,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnhandled(Exception e, HttpServletRequest request) {
+        try {
+            log.error("[Unhandled] id={} method={} uri={} type={} msg={}",
+                    request != null ? request.getHeader("X-Request-ID") : null,
+                    request != null ? request.getMethod() : null,
+                    request != null ? request.getRequestURI() : null,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(), e);
+        } catch (Exception ignore) { }
         return toResponse(ErrorCode.INTERNAL_SERVER_ERROR, request);
     }
 }
