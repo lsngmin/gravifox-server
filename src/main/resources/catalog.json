@@ -3,9 +3,13 @@
   "items": [
     {
       "key": "vit_residual_fusion",
-      "name": "Altair-0.1-beta",
+      "name": "Rekwiem Vision 0.1-alpha",
       "version": "2025-10",
       "description": "ViT-B/16 with residual branch and multipatch inference for SNS robustness.",
+      "descriptions": {
+        "en": "ViT-B/16 with residual branch and multipatch inference for SNS robustness.",
+        "ko": "SNS 환경에 견고한 멀티패치 추론을 적용한 ViT-B/16 잔차 브랜치 모델입니다."
+      },
       "type": "torch_image",
       "path": "/home/smin/tvb/tvb-ai/api/models/v1.pt",
       "threshold": 0.55,
@@ -21,9 +25,13 @@
     },
     {
       "key": "vit_b16_default",
-      "name": "Altair-0.2-alpha",
+      "name": "Rekwiem Vision 0.2-alpha",
       "version": "2025-10",
       "description": "Baseline ViT-B/16 classifier tuned for SNS imagery.",
+      "descriptions": {
+        "en": "Baseline ViT-B/16 classifier tuned for SNS imagery.",
+        "ko": "SNS 이미지에 맞춰 튜닝된 기본 ViT-B/16 분류기입니다."
+      },
       "type": "torch_image",
       "path": "/home/smin/tvb/tvb-ai/api/models/v2.pt",
       "threshold": 0.5,
