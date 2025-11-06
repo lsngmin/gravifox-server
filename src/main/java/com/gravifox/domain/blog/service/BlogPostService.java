@@ -7,6 +7,7 @@ import com.gravifox.domain.blog.repository.BlogPostRepository;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,9 @@ public class BlogPostService {
     public BlogPostResponse create(BlogPostRequest request) {
         String slug = normalizeSlug(request.slug());
         ensureSlugAvailable(slug, null);
+        Long id = generateUniqueId();
         BlogPost post = new BlogPost(
+                id,
                 slug,
                 normalizeText(request.title(), "title"),
                 normalizeText(request.excerpt(), "excerpt"),
@@ -123,5 +126,17 @@ public class BlogPostService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content_blank");
         }
         return value;
+    }
+
+    private Long generateUniqueId() {
+        final long min = 10_000_000L;        // 8 digits minimum
+        final long maxExclusive = 1_000_000_000L; // 1e9 (9 digits max, exclusive upper bound)
+        for (int attempt = 0; attempt < 32; attempt++) {
+            long candidate = ThreadLocalRandom.current().nextLong(min, maxExclusive);
+            if (!blogPostRepository.existsById(candidate)) {
+                return candidate;
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "blog_post_id_collision");
     }
 }

@@ -83,6 +83,7 @@ public class ModelCatalogService {
                     info.name(),
                     info.version(),
                     info.description(),
+                    info.descriptions(),
                     info.type(),
                     info.input(),
                     info.threshold(),
@@ -107,11 +108,13 @@ public class ModelCatalogService {
             for (JsonNode item : root.path("items")) {
                 String key = textNode(item.path("key"));
                 if (key == null || key.isBlank()) continue;
+                Map<String, String> descriptions = parseStringMap(item.path("descriptions"));
                 ModelInfo info = new ModelInfo(
                         key.trim(),
                         defaultText(item.path("name"), key),
                         textNode(item.path("version")),
                         textNode(item.path("description")),
+                        descriptions,
                         defaultText(item.path("type"), "torch_image"),
                         defaultText(item.path("input"), "image").toLowerCase(Locale.ROOT),
                         item.path("threshold").asDouble(0.5d),
@@ -172,6 +175,21 @@ public class ModelCatalogService {
         return List.copyOf(labels);
     }
 
+    private static Map<String, String> parseStringMap(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull() || !node.isObject()) {
+            return Map.of();
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        node.fields().forEachRemaining(e -> {
+            String k = e.getKey();
+            String v = textNode(e.getValue());
+            if (k != null && !k.isBlank() && v != null && !v.isBlank()) {
+                out.put(k.trim(), v.trim());
+            }
+        });
+        return Collections.unmodifiableMap(out);
+    }
+
     private static String textNode(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
@@ -193,6 +211,7 @@ public class ModelCatalogService {
             String name,
             String version,
             String description,
+            Map<String, String> descriptions,
             String type,
             String input,
             double threshold,
@@ -205,6 +224,7 @@ public class ModelCatalogService {
             String name,
             String version,
             String description,
+            Map<String, String> descriptions,
             String type,
             String input,
             double threshold,
