@@ -42,6 +42,9 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Value("${email.verification.service-name:GraviFox}")
     private String serviceName;
 
+    @Value("${email.verification.subject:[Email Verification] 이메일 인증을 완료해주세요}")
+    private String verificationSubject;
+
     @Value("${email.verification.rate-limit-per-hour:0}")
     private int rateLimitPerHour;
 
@@ -117,7 +120,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
         // 링크/메일 발송
         String link = verifyBaseUrl + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
-        String subject = "[" + serviceName + "] 이메일 인증 요청";
+        String subject = verificationSubject;
         String html = VerificationEmailTemplate.render(serviceName, link);
         mailSender.send(normalizedEmail, subject, html);
 
