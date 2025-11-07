@@ -12,5 +12,5 @@ public interface EmailVerificationService {
      */
     String verifyToken(String token);
 
-    EmailVerificationResponse requestVerification(String email, VerificationPurpose purpose);
+    EmailVerificationResponse requestVerification(String email, VerificationPurpose purpose, String lang);
 }

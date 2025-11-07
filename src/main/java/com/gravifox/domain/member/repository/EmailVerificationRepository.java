@@ -21,5 +21,6 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     );
 
     long countByEmailAndCreatedAtAfter(String email, LocalDateTime after);
-}
 
+    long countByEmailAndCreatedAtBetween(String email, LocalDateTime start, LocalDateTime end);
+}

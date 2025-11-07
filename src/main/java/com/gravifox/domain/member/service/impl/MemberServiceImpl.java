@@ -1,25 +1,27 @@
 package com.gravifox.domain.member.service.impl;
 
-import com.gravifox.domain.member.exception.common.ErrorCode;
-import com.gravifox.domain.member.exception.register.DataIntegrityViolationException;
-import com.gravifox.domain.member.exception.register.InvalidFormatException;
 import com.gravifox.domain.member.domain.Password;
-import com.gravifox.domain.member.domain.user.User;
+import com.gravifox.domain.member.domain.Profile;
 import com.gravifox.domain.member.domain.user.LoginType;
+import com.gravifox.domain.member.domain.user.User;
 import com.gravifox.domain.member.dto.mypage.MyInfoResponse;
 import com.gravifox.domain.member.dto.mypage.PasswordChangeRequest;
 import com.gravifox.domain.member.dto.mypage.ProfileUpdateRequest;
 import com.gravifox.domain.member.exception.InvalidCredentialsException;
+import com.gravifox.domain.member.exception.common.ErrorCode;
+import com.gravifox.domain.member.exception.register.DataIntegrityViolationException;
+import com.gravifox.domain.member.exception.register.InvalidFormatException;
 import com.gravifox.domain.member.exception.user.UserNotFoundException;
 import com.gravifox.domain.member.repository.PasswordRepository;
 import com.gravifox.domain.member.repository.ProfileRepository;
 import com.gravifox.domain.member.repository.SocialLoginRepository;
 import com.gravifox.domain.member.repository.UserRepository;
 import com.gravifox.domain.member.service.MemberService;
-import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,21 +36,23 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional(readOnly = true)
     public MyInfoResponse getMyInfo(Long userNo) {
-        return userRepository.findById(userNo)
-                .map(user -> {
-                    String uid = user.getUserId();
-                    if (user.getLoginType() == LoginType.GOOGLE && user.getSocialLogin() != null && user.getSocialLogin().getSocialId() != null) {
-                        uid = user.getSocialLogin().getSocialId();
-                    }
-                    return MyInfoResponse.builder()
-                            .userId(uid)
-                            .loginType(user.getLoginType().name())
-                            .nickname(user.getProfile().getNickname())
-                            .createdAt(user.getProfile().getCreatedAt())
-                            .updatedAt(user.getProfile().getUpdatedAt())
-                            .build();
-                })
+        User user = userRepository.findById(userNo)
                 .orElseThrow(() -> new UserNotFoundException(userNo));
+
+        Profile profile = resolveProfile(user);
+
+        String uid = user.getUserId();
+        if (user.getLoginType() == LoginType.GOOGLE && user.getSocialLogin() != null && user.getSocialLogin().getSocialId() != null) {
+            uid = user.getSocialLogin().getSocialId();
+        }
+
+        return MyInfoResponse.builder()
+                .userId(uid)
+                .loginType(user.getLoginType().name())
+                .nickname(profile.getNickname())
+                .createdAt(profile.getCreatedAt())
+                .updatedAt(profile.getUpdatedAt())
+                .build();
     }
 
     @Override
@@ -103,7 +107,7 @@ public class MemberServiceImpl implements MemberService {
             }
         });
 
-        var profile = user.getProfile();
+        Profile profile = resolveProfile(user);
         profile.updateNickname(nickname);
         profileRepository.save(profile);
 
@@ -114,5 +118,48 @@ public class MemberServiceImpl implements MemberService {
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())
                 .build();
+    }
+
+    private Profile resolveProfile(User user) {
+        Profile profile = user.getProfile();
+        if (profile != null) {
+            return profile;
+        }
+
+        return profileRepository.findByUser(user)
+                .orElseGet(() -> {
+                    Profile created = Profile.builder()
+                            .nickname(generateFallbackNickname(user))
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .user(user)
+                            .build();
+                    Profile saved = profileRepository.save(created);
+                    user.setProfile(saved);
+                    return saved;
+                });
+    }
+
+    private String generateFallbackNickname(User user) {
+        String base = user.getUserId();
+        if (base == null || base.isBlank()) {
+            base = "user";
+        }
+        base = base.replaceAll("[^a-zA-Z0-9]", "");
+        if (base.isBlank()) {
+            base = "user";
+        }
+
+        String candidate = base;
+        int suffix = 1;
+        while (profileRepository.findByNickname(candidate).isPresent()) {
+            candidate = base + suffix;
+            suffix++;
+            if (suffix > 1000) {
+                candidate = base + Long.toHexString(System.currentTimeMillis());
+                break;
+            }
+        }
+        return candidate;
     }
 }

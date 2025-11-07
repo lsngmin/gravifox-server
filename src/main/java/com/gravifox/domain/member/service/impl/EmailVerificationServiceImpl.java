@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -48,6 +49,9 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Value("${email.verification.rate-limit-per-hour:0}")
     private int rateLimitPerHour;
 
+    @Value("${email.verification.daily-limit:0}")
+    private int dailyLimit;
+
     @Override
     @Transactional
     public String verifyToken(String token) {
@@ -75,12 +79,13 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     @Override
     @Transactional
-    public EmailVerificationResponse requestVerification(String email, VerificationPurpose purpose) {
+    public EmailVerificationResponse requestVerification(String email, VerificationPurpose purpose, String lang) {
         String normalizedEmail = email == null ? null : email.trim().toLowerCase();
         if (normalizedEmail == null || normalizedEmail.isBlank()) {
             // 단순화: 요청은 항상 200을 반환하고, 내부에서만 유효성 체크
             return new EmailVerificationResponse(false, resendCooldownSeconds);
         }
+        String language = resolveLanguage(lang);
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -88,9 +93,24 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         if (rateLimitPerHour > 0) {
             long cnt = emailVerificationRepository.countByEmailAndCreatedAtAfter(normalizedEmail, now.minusHours(1));
             if (cnt >= rateLimitPerHour) {
-                long secondsSinceHour = java.time.Duration.between(now.withMinute(0).withSecond(0).withNano(0), now).getSeconds();
+                long secondsSinceHour = Duration.between(now.withMinute(0).withSecond(0).withNano(0), now).getSeconds();
                 long remainToNextHour = Math.max(1, 3600 - secondsSinceHour);
                 return new EmailVerificationResponse(false, remainToNextHour);
+            }
+        }
+
+        // 일별 발송 한도(옵션)
+        if (dailyLimit > 0) {
+            LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+            LocalDateTime startOfNextDay = startOfDay.plusDays(1);
+            long countToday = emailVerificationRepository.countByEmailAndCreatedAtBetween(
+                    normalizedEmail,
+                    startOfDay,
+                    startOfNextDay
+            );
+            if (countToday >= dailyLimit) {
+                long secondsUntilTomorrow = Duration.between(now, startOfNextDay).getSeconds();
+                return new EmailVerificationResponse(false, Math.max(1, secondsUntilTomorrow));
             }
         }
         // 최근 PENDING 레코드 조회
@@ -99,7 +119,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
         if (latestPending.isPresent()) {
             EmailVerification ev = latestPending.get();
-            long secondsSinceCreated = java.time.Duration.between(ev.getCreatedAt(), now).getSeconds();
+            long secondsSinceCreated = Duration.between(ev.getCreatedAt(), now).getSeconds();
             long remain = resendCooldownSeconds - secondsSinceCreated;
             if (remain > 0) {
                 // 쿨다운 미종료: 실제 발송 없이 남은 시간 안내
@@ -121,10 +141,19 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         // 링크/메일 발송
         String link = verifyBaseUrl + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
         String subject = verificationSubject;
-        String html = VerificationEmailTemplate.render(serviceName, link);
+        String html = VerificationEmailTemplate.render(serviceName, link, language);
         mailSender.send(normalizedEmail, subject, html);
 
         return new EmailVerificationResponse(true, resendCooldownSeconds);
+    }
+
+    private String resolveLanguage(String lang) {
+        if (lang == null) return "ko";
+        String trimmed = lang.trim().toLowerCase();
+        return switch (trimmed) {
+            case "en" -> "en";
+            default -> "ko";
+        };
     }
 
     private static String generateToken() {

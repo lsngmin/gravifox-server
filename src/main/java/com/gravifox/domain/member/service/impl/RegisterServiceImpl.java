@@ -105,7 +105,7 @@ public class RegisterServiceImpl implements RegisterService {
 
         // 이메일 인증 요청 자동 발송 (회원가입 완료 직후)
         try {
-            emailVerificationService.requestVerification(user.getUserId(), VerificationPurpose.SIGNUP);
+            emailVerificationService.requestVerification(user.getUserId(), VerificationPurpose.SIGNUP, null);
         } catch (Exception e) {
             // 발송 실패가 회원가입 트랜잭션을 막지 않도록 예외는 삼킵니다. (로그는 AOP/전역 로거에서 처리)
         }

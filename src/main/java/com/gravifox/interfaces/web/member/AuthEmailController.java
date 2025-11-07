@@ -72,7 +72,7 @@ public class AuthEmailController {
     @Operation(summary = "이메일 인증 메일 요청/재발송")
     public ResponseEntity<EmailVerificationResponse> request(@RequestBody EmailVerificationRequest request) {
         VerificationPurpose purpose = VerificationPurpose.fromString(request.getPurpose());
-        EmailVerificationResponse res = emailVerificationService.requestVerification(request.getEmail(), purpose);
+        EmailVerificationResponse res = emailVerificationService.requestVerification(request.getEmail(), purpose, request.getLang());
         return ResponseEntity.ok(res);
     }
 }

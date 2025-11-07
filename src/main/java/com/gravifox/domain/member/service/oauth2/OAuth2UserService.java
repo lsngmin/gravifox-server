@@ -53,7 +53,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
             User newUser = User.builder()
                     .userId(email)
                     .loginType(LoginType.GOOGLE)
-                    .emailVerified(true)
+                    .emailVerified(false)
                     .build();
             persistedUser = userRepository.save(newUser);
         } else {

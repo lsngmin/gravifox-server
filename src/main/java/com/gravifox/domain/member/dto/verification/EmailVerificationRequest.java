@@ -10,4 +10,5 @@ import lombok.Setter;
 public class EmailVerificationRequest {
     private String email;
     private String purpose; // SIGNUP | RESET_PASSWORD | VERIFY_EMAIL
+    private String lang;    // optional (ko | en)
 }
