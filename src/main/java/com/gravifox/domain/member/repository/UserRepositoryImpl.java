@@ -55,6 +55,7 @@ public class UserRepositoryImpl implements AdminUserRepositoryCustom {
                         profile.nickname,
                         user.loginType,
                         user.emailVerified,
+                        profile.createdAt,
                         JPAExpressions
                                 .select(analysisReport.createdAt.max())
                                 .from(analysisReport)

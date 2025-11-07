@@ -10,9 +10,9 @@ public record AdminUserSummaryQueryResult(
         String nickname,
         LoginType loginType,
         Boolean emailVerified,
+        LocalDateTime createdAt,
         LocalDateTime lastAnalysisAt,
         Integer monthlyQuotaLimit,
         Integer monthlyQuotaUsed
 ) {
 }
-

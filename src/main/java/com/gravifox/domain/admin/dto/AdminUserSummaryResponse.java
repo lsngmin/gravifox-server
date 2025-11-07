@@ -8,22 +8,17 @@ public record AdminUserSummaryResponse(
         String nickname,
         String loginType,
         boolean emailVerified,
+        LocalDateTime createdAt,
         LocalDateTime lastAnalysisAt,
         Integer monthlyQuotaLimit,
         Integer monthlyQuotaUsed,
         Integer monthlyQuotaRemaining
 ) {
 
-    public static AdminUserSummaryResponse from(AdminUserSummaryQueryResult result) {
-        Integer limit = result.monthlyQuotaLimit();
-        Integer used = result.monthlyQuotaUsed();
-        Integer remaining = null;
-        if (limit != null && used != null) {
-            remaining = limit - used;
-            if (remaining < 0) {
-                remaining = 0;
-            }
-        }
+    public static AdminUserSummaryResponse from(AdminUserSummaryQueryResult result, int defaultMonthlyLimit) {
+        int limit = result.monthlyQuotaLimit() != null ? result.monthlyQuotaLimit() : defaultMonthlyLimit;
+        int used = Math.max(0, result.monthlyQuotaUsed() != null ? result.monthlyQuotaUsed() : 0);
+        int remaining = Math.max(0, limit - used);
 
         return new AdminUserSummaryResponse(
                 result.userNo(),
@@ -31,6 +26,7 @@ public record AdminUserSummaryResponse(
                 result.nickname(),
                 result.loginType() != null ? result.loginType().name() : null,
                 Boolean.TRUE.equals(result.emailVerified()),
+                result.createdAt(),
                 result.lastAnalysisAt(),
                 limit,
                 used,
@@ -38,4 +34,3 @@ public record AdminUserSummaryResponse(
         );
     }
 }
-

@@ -2,6 +2,7 @@ package com.gravifox.domain.admin.service;
 
 import com.gravifox.domain.admin.dto.AdminUserSummaryQueryResult;
 import com.gravifox.domain.admin.dto.AdminUserSummaryResponse;
+import com.gravifox.domain.analysis.config.AnalyzeQuotaProperties;
 import com.gravifox.domain.analysis.domain.AnalyzeMonthlyQuota;
 import com.gravifox.domain.analysis.repository.AnalyzeMonthlyQuotaRepository;
 import com.gravifox.domain.member.repository.UserRepository;
@@ -27,13 +28,15 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final AnalyzeMonthlyQuotaRepository analyzeMonthlyQuotaRepository;
+    private final AnalyzeQuotaProperties analyzeQuotaProperties;
 
     public PageResponse<AdminUserSummaryResponse> getUserSummaries(String keyword, Pageable pageable) {
         Pageable sanitized = sanitizePageable(pageable);
         YearMonth currentMonth = YearMonth.now(KST);
 
         Page<AdminUserSummaryQueryResult> page = userRepository.findAdminUserSummaries(keyword, currentMonth, sanitized);
-        Page<AdminUserSummaryResponse> mapped = page.map(AdminUserSummaryResponse::from);
+        int defaultMonthlyLimit = analyzeQuotaProperties.getMonthlyDefault();
+        Page<AdminUserSummaryResponse> mapped = page.map(result -> AdminUserSummaryResponse.from(result, defaultMonthlyLimit));
 
         return PageResponse.from(mapped);
     }
