@@ -15,7 +15,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://tvb.c1ec6awas4l6.us-east-2.rds.amazonaws.com:3306/member?serverTimezone=UTC&characterEncoding=UTF-8
+    url: jdbc:mysql://rekwiem.c1ec6awas4l6.us-east-2.rds.amazonaws.com:3306/member?serverTimezone=UTC&characterEncoding=UTF-8
     username: root
     password: rootroot
 
