@@ -3,7 +3,7 @@
   "items": [
     {
       "key": "vit_residual_fusion",
-      "name": "Rekwiem Vision 0.1-alpha",
+      "name": "Altair-0.1-beta",
       "version": "2025-10",
       "description": "ViT-B/16 with residual branch and multipatch inference for SNS robustness.",
       "descriptions": {
@@ -25,7 +25,7 @@
     },
     {
       "key": "vit_b16_default",
-      "name": "Rekwiem Vision 0.2-alpha",
+      "name": "Altair-0.2-alpha",
       "version": "2025-10",
       "description": "Baseline ViT-B/16 classifier tuned for SNS imagery.",
       "descriptions": {
@@ -34,6 +34,24 @@
       },
       "type": "torch_image",
       "path": "/home/smin/tvb/tvb-ai/api/models/v2.pt",
+      "threshold": 0.5,
+      "input": "image",
+      "labels": [
+        "REAL",
+        "FAKE"
+      ]
+    },
+    {
+      "key": "rkmv1",
+      "name": "Rekwiem Vision V1",
+      "version": "2025-10",
+      "description": "CLIP",
+      "descriptions": {
+        "en": "Baseline ViT-B/16 classifier tuned for SNS imagery.",
+        "ko": "풍경이나 사람을 제외한 사물이나 모든 물체에 대해서 판별할 수 있습니다."
+      },
+      "type": "torch_image",
+      "path": "/home/smin/tvb/tvb-ai/api/models/rkmv1.pt",
       "threshold": 0.5,
       "input": "image",
       "labels": [
