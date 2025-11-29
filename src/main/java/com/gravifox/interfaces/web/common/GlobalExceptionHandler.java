@@ -11,10 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Optional;
 
@@ -22,7 +24,7 @@ import java.util.Optional;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    private static ResponseEntity<?> toResponse(ErrorCode code, HttpServletRequest request) {
+    private static ResponseEntity<?> toResponse(com.gravifox.common.exception.ErrorCode code, HttpServletRequest request) {
         HttpStatus status = Optional.ofNullable(code.getHttpStatus()).orElse(HttpStatus.INTERNAL_SERVER_ERROR);
 
         // If the request negotiated Server-Sent Events, return SSE-friendly error text
@@ -88,6 +90,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<?> handleAccessDenied(org.springframework.security.access.AccessDeniedException e, HttpServletRequest request) {
         return toResponse(ErrorCode.INVALID_CREDENTIALS, request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        try {
+            log.warn("[MethodNotAllowed] id={} method={} uri={} supported={}",
+                    request != null ? request.getHeader("X-Request-ID") : null,
+                    request != null ? request.getMethod() : null,
+                    request != null ? request.getRequestURI() : null,
+                    e.getSupportedHttpMethods());
+        } catch (Exception ignore) { }
+        return toResponse(ErrorCode.METHOD_NOT_ALLOWED, request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> handleNoResource(NoResourceFoundException e, HttpServletRequest request) {
+        try {
+            log.warn("[ResourceNotFound] id={} method={} uri={}",
+                    request != null ? request.getHeader("X-Request-ID") : null,
+                    request != null ? request.getMethod() : null,
+                    request != null ? request.getRequestURI() : null);
+        } catch (Exception ignore) { }
+        return toResponse(ErrorCode.RESOURCE_NOT_FOUND, request);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
