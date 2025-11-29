@@ -37,7 +37,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Value("${email.verification.resend-cooldown-seconds:60}")
     private long resendCooldownSeconds;
 
-    @Value("${email.verification.verify-base-url:http://localhost:8080/api/v1/auth/email/verify}")
+    @Value("${email.verification.verify-base-url:https://api.gravifox.com/api/v1/auth/email/verify}")
     private String verifyBaseUrl;
 
     @Value("${email.verification.service-name:GraviFox}")

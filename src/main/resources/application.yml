@@ -84,7 +84,8 @@ email:
     ttl-seconds: 86400                 # 토큰 유효기간(초)
     resend-cooldown-seconds: 60        # 재발송 쿨다운(초)
     rate-limit-per-hour: 5             # 시간당 발송 한도(0=비활성)
-    verify-base-url: http://localhost:8080/api/v1/auth/email/verify  # 검증 링크 베이스 URL
+    daily-limit: 5                     # 하루 전체 발송 한도(0=비활성)
+    verify-base-url: https://api.gravifox.com/api/v1/auth/email/verify    # 검증 링크 베이스 URL
     service-name: Rekwiem              # 메일에 노출될 서비스명
     subject: "[Email Verification] 이메일 인증을 완료해주세요"
 
